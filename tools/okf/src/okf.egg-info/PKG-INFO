@@ -1,6 +1,0 @@
-Metadata-Version: 2.4
-Name: okf
-Version: 0.1.0
-Summary: OKF knowledge-bundle tooling for this repo
-Requires-Python: >=3.11
-Requires-Dist: PyYAML>=6.0
