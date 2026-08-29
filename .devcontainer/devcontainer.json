@@ -1,0 +1,43 @@
+{
+  "name": "ESP-IDF esp32c6",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "args": {
+      "DOCKER_TAG": "release-v5.4"
+    }
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "idf.espIdfPath": "/opt/esp/idf",
+        "idf.toolsPath": "/opt/esp",
+        "idf.gitPath": "/usr/bin/git",
+        "idf.showOnboardingOnInit": false,
+        "idf.port": "/dev/ttyACM0",
+        "clangd.arguments": [
+          "--compile-commands-dir=${containerWorkspaceFolder}/build"
+        ]
+      },
+      "extensions": [
+        "espressif.esp-idf-extension",
+        "llvm-vs-code-extensions.vscode-clangd",
+        "github.vscode-pull-request-github"
+      ]
+    }
+  },
+  "mounts": [
+    "source=${localEnv:HOME}/.ssh,target=/root/.ssh,type=bind,consistency=cached"
+  ],
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "runArgs": [
+    "--privileged",
+    "--volume=/dev:/dev",
+    "--volume=/etc/timezone:/etc/timezone:ro",
+    "--env-file",
+    "${localWorkspaceFolder}/.env"
+  ]
+}
