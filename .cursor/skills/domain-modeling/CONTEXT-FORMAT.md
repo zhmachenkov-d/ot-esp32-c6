@@ -1,5 +1,35 @@
 # CONTEXT.md Format
 
+## Layout
+
+Most repos are single-context:
+
+```
+/
+├── CONTEXT.md
+├── docs/
+│   └── adr/
+└── src/
+```
+
+When a second bounded context crystallises, introduce a root `CONTEXT-MAP.md` and move each glossary beside its code. System-wide ADRs stay at `docs/adr/`; context-specific ADRs live under that context:
+
+```
+/
+├── CONTEXT-MAP.md
+├── docs/
+│   └── adr/                          ← system-wide decisions
+├── src/
+│   ├── ordering/
+│   │   ├── CONTEXT.md
+│   │   └── docs/adr/                 ← context-specific decisions
+│   └── billing/
+│       ├── CONTEXT.md
+│       └── docs/adr/
+```
+
+Create files lazily: only when you have something to write. If neither `CONTEXT.md` nor `CONTEXT-MAP.md` exists, create a root `CONTEXT.md` when the first term is resolved.
+
 ## Structure
 
 ```md
@@ -29,11 +59,9 @@ _Avoid_: Client, buyer, account
 - **Only include terms specific to this project's context.** General programming concepts (timeouts, error types, utility patterns) don't belong even if the project uses them extensively. Before adding a term, ask: is this a concept unique to this context, or a general programming concept? Only the former belongs.
 - **Group terms under subheadings** when natural clusters emerge. If all terms belong to a single cohesive area, a flat list is fine.
 
-## Single vs multi-context repos
+## Context map
 
-**Single context (most repos):** One `CONTEXT.md` at the repo root.
-
-**Multiple contexts:** A `CONTEXT-MAP.md` at the repo root lists the contexts, where they live, and how they relate to each other:
+A `CONTEXT-MAP.md` at the repo root lists the contexts, where they live, and how they relate:
 
 ```md
 # Context Map
@@ -51,7 +79,7 @@ _Avoid_: Client, buyer, account
 - **Ordering ↔ Billing**: Shared types for `CustomerId` and `Money`
 ```
 
-The skill infers which structure applies:
+Infer which structure applies:
 
 - If `CONTEXT-MAP.md` exists, read it to find contexts
 - If only a root `CONTEXT.md` exists, single context

@@ -1,8 +1,11 @@
 # ADR Format
 
-ADRs live in `docs/adr/` and use sequential numbering: `0001-slug.md`, `0002-slug.md`, etc.
+## Location
 
-Create the `docs/adr/` directory lazily: only when the first ADR is needed.
+- **Single-context repo:** `docs/adr/` at the repo root.
+- **Multi-context repo:** system-wide decisions in root `docs/adr/`; decisions that belong to one bounded context in that context's `docs/adr/` (see [CONTEXT-FORMAT.md](./CONTEXT-FORMAT.md)).
+
+Numbering is per directory: `0001-slug.md`, `0002-slug.md`, etc. Scan the target directory for the highest existing number and increment by one. Create the directory lazily when the first ADR there is needed.
 
 ## Template
 
@@ -18,23 +21,26 @@ That's it. An ADR can be a single paragraph. The value is in recording *that* a 
 
 Only include these when they add genuine value. Most ADRs won't need them.
 
-- **Status** frontmatter (`proposed | accepted | deprecated | superseded by ADR-NNNN`): useful when decisions are revisited
+- **Status** frontmatter — useful when decisions are revisited:
+
+```md
+---
+status: accepted
+---
+```
+
+  Values: `proposed` | `accepted` | `deprecated` | `superseded by ADR-NNNN`
+
 - **Considered Options**: only when the rejected alternatives are worth remembering
 - **Consequences**: only when non-obvious downstream effects need to be called out
 
-## Numbering
-
-Scan `docs/adr/` for the highest existing number and increment by one.
-
 ## When to offer an ADR
 
-All three of these must be true:
+All three must be true:
 
 1. **Hard to reverse**: the cost of changing your mind later is meaningful
-2. **Surprising without context**: a future reader will look at the code and wonder "why on earth did they do it this way?"
+2. **Surprising without context**: a future reader will wonder "why did they do it this way?"
 3. **The result of a real trade-off**: there were genuine alternatives and you picked one for specific reasons
-
-If a decision is easy to reverse, skip it: you'll just reverse it. If it's not surprising, nobody will wonder why. If there was no real alternative, there's nothing to record beyond "we did the obvious thing."
 
 ### What qualifies
 
