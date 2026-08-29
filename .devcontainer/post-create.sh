@@ -26,3 +26,6 @@ echo "Default target: esp32c6 (set via idf.py set-target when CMakeLists.txt exi
 
 # Install specify-cli
 uv tool install specify-cli --from git+https://github.com/github/spec-kit.git@v1.0.1
+
+# OKF knowledge-bundle tooling (python -m okf …)
+pip install -e "${containerWorkspaceFolder:-/workspaces/ot-esp32-c6}/tools/okf"
