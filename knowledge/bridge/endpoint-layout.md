@@ -18,7 +18,7 @@ How the **Bridge** maps available OpenTherm Data IDs onto Zigbee endpoints.
 
 All three Thermostat endpoints are always registered. Unsupported channels report invalid sentinels.
 
-ID 0 status is fanned out to all three endpoints (`ThermostatRunningState`). See [Thermostat Channel Mapping](/docs/thermostats_data_ids_mapping.md).
+ID 0 status is fanned out to all three endpoints (`ThermostatRunningState`). Channel Data IDs: [Water Setpoint Mapping](/bridge/water-setpoint-mapping.md), [Local Temperature Mapping](/bridge/local-temperature-mapping.md).
 
 ## Spillover endpoint
 
@@ -63,5 +63,5 @@ Thermostat-mapped IDs appear on **one** channel endpoint only. Spillover-routed 
 
 [1] `main/zb_ot_bridge.c` — endpoint factory, spillover registration
 [2] `main/zb_ot_bridge.h` — endpoint constants
-[3] `docs/thermostats_data_ids_mapping.md` — channel mapping table
-[4] `CONTEXT.md` — Heating channel, DHW channel
+[3] [Water Setpoint Mapping](/bridge/water-setpoint-mapping.md) — setpoint channel table
+[4] [Local Temperature Mapping](/bridge/local-temperature-mapping.md) — temperature channel table

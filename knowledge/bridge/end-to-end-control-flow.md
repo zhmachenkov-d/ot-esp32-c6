@@ -37,7 +37,7 @@ How the **Bridge** firmware connects Zigbee cluster commands to OpenTherm master
 | ID 0 keepalive | `opentherm_send_status_keepalive` | Maintains OT link (CH + DHW + CH2 master flags) |
 | ID 0 slave READ | `poll_and_route_id(0)` every fast tick | ThermostatRunningState on ep 10, 11, 12 |
 
-Layered routing details: [Endpoint Layout](/bridge/endpoint-layout.md), [Spillover Encoding](/bridge/spillover-encoding.md), [Thermostat Channel Mapping](/docs/thermostats_data_ids_mapping.md).
+Layered routing details: [Endpoint Layout](/bridge/endpoint-layout.md), [Spillover Encoding](/bridge/spillover-encoding.md), [Water Setpoint Mapping](/bridge/water-setpoint-mapping.md), [Local Temperature Mapping](/bridge/local-temperature-mapping.md).
 
 ## Roles
 

@@ -42,4 +42,4 @@ Setpoint writes trigger `ot_bridge_apply_outputs()` immediately: status (ID 0) t
 # Citations
 
 [1] `main/ot_bridge.c` — `ot_bridge_on_heating_setpoint`, `ot_bridge_apply_outputs`
-[2] `docs/thermostats_data_ids_mapping.md` — channel table
+[2] [Endpoint Layout](/bridge/endpoint-layout.md) — fixed thermostat endpoints 10–12

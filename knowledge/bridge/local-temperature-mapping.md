@@ -44,4 +44,4 @@ Reports only when value or validity changes and Zigbee network is joined.
 
 [1] `main/ot_poll.c` — `poll_and_route_id`
 [2] `main/ot_zcl_route.c` — `report_thermostat_channel_read`
-[3] `docs/thermostats_data_ids_mapping.md` — channel table
+[3] [Endpoint Layout](/bridge/endpoint-layout.md) — fixed thermostat endpoints 10–12

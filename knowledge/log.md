@@ -1,5 +1,8 @@
 # Directory Update Log
 
+## 2026-08-29
+* **Lint**: Regenerated stale `index.md` / `bridge/index.md`; replaced broken links to removed `docs/thermostats_data_ids_mapping.md` with [Water Setpoint Mapping](/bridge/water-setpoint-mapping.md) and [Local Temperature Mapping](/bridge/local-temperature-mapping.md).
+
 ## 2026-07-02
 * **Update**: Phase 6–7 — v2 poll engine (`ot_poll`), Kconfig tunables, and bridge playbooks for discovery, endpoints, spillover, catalog commands, and poll tiers.
 * **Creation**: Added [Discovery Catalog](/bridge/discovery-catalog.md), [Endpoint Layout](/bridge/endpoint-layout.md), [Spillover Encoding](/bridge/spillover-encoding.md), [Catalog Commands](/bridge/catalog-commands.md), and [Poll Tiers](/bridge/poll-tiers.md).
