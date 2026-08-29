@@ -1,19 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ -d /ssh ]; then
-  mkdir -p /root/.ssh
-  cp -r /ssh/. /root/.ssh/
-  chown -R root:root /root/.ssh
-  chmod 700 /root/.ssh
-  find /root/.ssh -type f -exec chmod 600 {} \;
-fi
+SSH_DIR="${HOME}/.ssh"
 
-chown -R root:root /root/.ssh
-chmod 700 /root/.ssh
-find /root/.ssh -type f -exec chmod 600 {} \;
+WS="${containerWorkspaceFolder:-/workspaces/ot-esp32-c6}"
 
-git config --global --add safe.directory "${containerWorkspaceFolder:-/workspaces/ot-esp32-c6}"
+git config --global --add safe.directory "${WS}"
 
 source /opt/esp/idf/export.sh
 
@@ -27,5 +19,5 @@ echo "Default target: esp32c6 (set via idf.py set-target when CMakeLists.txt exi
 # Install specify-cli
 uv tool install specify-cli --from git+https://github.com/github/spec-kit.git@v1.0.1
 
-# OKF knowledge-bundle tooling (python -m okf …)
-pip install -e "${containerWorkspaceFolder:-/workspaces/ot-esp32-c6}/tools/okf"
+# OKF knowledge-bundle tooling (okf …) via uv user tools — not the root-owned IDF venv.
+uv tool install -e "${WS}/tools/okf"

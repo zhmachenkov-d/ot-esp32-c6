@@ -7,20 +7,15 @@ description: Build and maintain the project's OKF knowledge bundle under knowled
 
 Compile and maintain the agent-owned **Knowledge bundle** under `knowledge/` from immutable **Raw source** files in `wiki/raw/`. Humans curate sources and ask questions; you compile concepts, update cross-links, and run tooling.
 
-Prefer **Python tooling** over reading the bundle into context. From repo root:
-
-```bash
-pip install -e tools/okf   # once per env; if the env is not writable:
-# PYTHONPATH=tools/okf/src python -m okf …
-```
+Prefer **Python tooling** over reading the bundle into context. From repo root (devcontainer installs `okf` via `uv tool install -e tools/okf`):
 
 | Need | Command |
 |------|---------|
-| Refresh indexes | `python -m okf index knowledge/` |
-| Conformance | `python -m okf validate knowledge/` |
-| Lint (+ autofix) | `python -m okf lint knowledge/` · `--fix` |
-| Find concepts | `python -m okf search knowledge/ '<query>'` |
-| Export / graph | `python -m okf export knowledge/ -o dist/` · `visualize knowledge/` |
+| Refresh indexes | `okf index knowledge/` |
+| Conformance | `okf validate knowledge/` |
+| Lint (+ autofix) | `okf lint knowledge/` · `--fix` |
+| Find concepts | `okf search knowledge/ '<query>'` |
+| Export / graph | `okf export knowledge/ -o dist/` · `okf visualize knowledge/` |
 
 After writes to `knowledge/`, run `index` then `validate`.
 
@@ -60,7 +55,7 @@ Always: fetch → `wiki/raw/`, then compile → `knowledge/`.
 
 **Fetch:** English if needed; reuse close `wiki/raw/<topic>/`; save `YYYY-MM-DD-descriptive-slug.md` (drop date if unknown); preserve text, clean formatting noise only.
 
-**Compile (G2 medium):** split major reference areas into linked concepts. Third-party → topic dir; project mappings/procedures → `bridge/` as `Playbook`. Then cross-link, append `knowledge/log.md` (newest ISO date first), `python -m okf index knowledge/` + `validate`.
+**Compile (G2 medium):** split major reference areas into linked concepts. Third-party → topic dir; project mappings/procedures → `bridge/` as `Playbook`. Then cross-link, append `knowledge/log.md` (newest ISO date first), `okf index knowledge/` + `okf validate`.
 
 ```markdown
 ## 2026-07-02
@@ -70,7 +65,7 @@ Always: fetch → `wiki/raw/`, then compile → `knowledge/`.
 
 ## Query
 
-1. `python -m okf search knowledge/ '<terms>'` — shortlist paths (do not load the whole tree).
+1. `okf search knowledge/ '<terms>'` — shortlist paths (do not load the whole tree).
 2. Read only the hit concepts; prefer bundle over training knowledge.
 3. Cite project-root paths. Write files only if asked to archive.
 
@@ -79,8 +74,8 @@ Always: fetch → `wiki/raw/`, then compile → `knowledge/`.
 ## Lint
 
 ```bash
-python -m okf lint knowledge/
-python -m okf lint knowledge/ --fix
+okf lint knowledge/
+okf lint knowledge/ --fix
 ```
 
 Tooling covers conformance, raw provenance, citation mirroring, index staleness, broken links, orphans; `--fix` regenerates indexes and rewrites links when exactly one basename matches. You still do heuristic review (contradictions, stale vs newer raw, missing G2 splits, prose mentions without a page) — report only.
