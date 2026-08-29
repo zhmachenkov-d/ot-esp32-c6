@@ -11,7 +11,7 @@ raw:
 
 The [OpenTherm Library](https://github.com/ihormelnyk/opentherm_library) by Ihor Melnyk is a widely used **OpenTherm v2.2 master** implementation for Arduino, ESP8266, and ESP32 (v1.1.5, MIT). It uses GPIO interrupts for Manchester frame timing.
 
-This repo includes it under `components/opentherm/` as a reference for protocol logic, even when using native ESP-IDF APIs.
+This repo includes it under `components/opentherm/` as a reference for protocol logic, even when using native ESP-IDF APIs. For a native IDF component (no Arduino), see [Sazanof ESP-IDF OpenTherm](/opentherm/sazanof-esp-idf-opentherm.md).
 
 ## Requirements
 

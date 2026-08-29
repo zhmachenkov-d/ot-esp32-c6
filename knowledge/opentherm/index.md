@@ -7,3 +7,5 @@
 * [OpenTherm Data Encoding](opentherm/opentherm-data-encoding.md) - f8.8 temperature encoding and flag8 status bit packing.
 * [OpenTherm Frame Format](opentherm/opentherm-frame-format.md) - OT/+ 32-bit frame layout, message types, and master/slave timing rules.
 * [OpenTherm Protocol](opentherm/opentherm-protocol.md) - Point-to-point master/slave HVAC bus; OT/+ digital and OT/- analogue levels.
+* [Sazanof ESP-IDF OpenTherm](opentherm/sazanof-esp-idf-opentherm.md) - Native ESP-IDF OpenTherm master component (sazanof/opentherm); GPIO interrupt + esp_timer framing.
+* [xyzroe OpenTherm-TTL Adapter](opentherm/xyzroe-opentherm-ttl-adapter.md) - Opto-isolated OpenTherm↔TTL module (RS485-sized); RX/TX/VCC/GND header.

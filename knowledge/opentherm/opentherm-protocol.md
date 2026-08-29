@@ -34,6 +34,7 @@ Galvanic isolation from mains is required on the boiler interface (EN60730-1). S
 - Frame structure and timing: [OpenTherm Frame Format](/opentherm/opentherm-frame-format.md)
 - Temperature encoding: [OpenTherm Data Encoding](/opentherm/opentherm-data-encoding.md)
 - Reference implementation: [Melnyk OpenTherm Library](/opentherm/melnyk-opentherm-library.md)
+- Hardware adapter example: [xyzroe OpenTherm-TTL Adapter](/opentherm/xyzroe-opentherm-ttl-adapter.md)
 
 # Citations
 

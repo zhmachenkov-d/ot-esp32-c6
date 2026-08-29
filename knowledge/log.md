@@ -1,6 +1,14 @@
 # Directory Update Log
 
 ## 2026-08-29
+* **Creation**: Added [xyzroe OpenTherm-TTL Adapter](/opentherm/xyzroe-opentherm-ttl-adapter.md) from `wiki/raw/opentherm/2022-06-xyzroe-opentherm-ttl-adapter.md` (+ schematic PNG).
+* **Update**: Linked [OpenTherm GPIO Wiring](/bridge/opentherm-gpio-wiring.md) and [OpenTherm Protocol](/opentherm/opentherm-protocol.md) to the xyzroe adapter.
+
+## 2026-08-29
+* **Creation**: Added [Sazanof ESP-IDF OpenTherm](/opentherm/sazanof-esp-idf-opentherm.md) from `wiki/raw/opentherm/2026-04-14-sazanof-esp-idf-opentherm.md`.
+* **Update**: Linked [Melnyk OpenTherm Library](/opentherm/melnyk-opentherm-library.md) and [OpenTherm GPIO Wiring](/bridge/opentherm-gpio-wiring.md) to the Sazanof component.
+
+## 2026-08-29
 * **Lint**: Regenerated stale `index.md` / `bridge/index.md`; replaced broken links to removed `docs/thermostats_data_ids_mapping.md` with [Water Setpoint Mapping](/bridge/water-setpoint-mapping.md) and [Local Temperature Mapping](/bridge/local-temperature-mapping.md).
 
 ## 2026-07-02
