@@ -9,7 +9,7 @@ if [ -d /ssh ]; then
   find /root/.ssh -type f -exec chmod 600 {} \;
 fi
 
-git config --global --add safe.directory "${containerWorkspaceFolder:-/workspaces/esp32-c6-opentherm}"
+git config --global --add safe.directory "${containerWorkspaceFolder:-/workspaces/ot-esp32-c6}"
 
 source /opt/esp/idf/export.sh
 
