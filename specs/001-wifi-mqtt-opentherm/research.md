@@ -96,7 +96,7 @@ Publish retained discovery configs after catalog validation; re-publish on recon
 
 ## 6. Fail-safe and retained MQTT writes
 
-**Decision**: Within **10 s** of Wi‑Fi or MQTT unavailability (SC-004): enter fail-safe — continue OT keepalive/polling; **hold last commanded CH setpoint** (ID 1); refuse **all** remote Data ID writes until link healthy (FR-006). On recovery: debounce link-up; **apply at most one retained CH setpoint (ID 1)** if present, then follow live commands; ignore retained storms for other writables (do not apply retained non-ID-1 commands automatically).
+**Decision**: Wi‑Fi STA disconnect / lost-IP **or** MQTT client disconnect/error starts a fail-safe entry timer; if the combined link stays unhealthy, enter fail-safe within **10 s** (SC-004) — continue OT keepalive/polling; **hold last commanded CH setpoint** (ID 1); refuse **all** remote Data ID writes until link healthy (FR-006). Cancel the timer if Wi‑Fi and MQTT recover before expiry. On recovery: debounce link-up; **apply at most one retained CH setpoint (ID 1)** if present, then follow live commands; ignore retained storms for other writables (do not apply retained non-ID-1 commands automatically).
 
 **Rationale**: Spec Assumptions default; aligns with OTGateway-style emergency thinking without inventing new demand.
 
@@ -126,7 +126,7 @@ Publish retained discovery configs after catalog validation; re-publish on recon
 
 ## 9. Boiler-link health threshold
 
-**Decision**: Unhealthy after **3 consecutive failed** OT exchanges at ≥1 Hz keepalive/status cadence (or equivalent ~3 s window); healthy again after **successful exchange(s)** (spec default FR-012). Distinct from MQTT LWT availability.
+**Decision**: Unhealthy after **3 consecutive failed** OT exchanges at ≥1 Hz keepalive/status cadence (or equivalent ~3 s window); healthy again after **one successful** keepalive/status exchange (FR-012). Distinct from MQTT LWT availability.
 
 **Rationale**: Clarification session default; avoids flapping on single glitch.
 
@@ -144,9 +144,9 @@ Publish retained discovery configs after catalog validation; re-publish on recon
 
 ## 11. Constitution Zigbee framing
 
-**Decision**: Do not implement Zigbee. Treat constitution Zigbee/ZCL wording as **governance debt**: amend constitution in a follow-up to Wi‑Fi MQTT product language (already noted in spec Assumptions and assessment decision). Until then, apply principles I–V mapped to MQTT entities and OT poll budgets.
+**Decision**: Do not implement Zigbee or Thread. **Resolved (2026-08-30)**: constitution **v2.0.0** retargets principles I–V to Wi‑Fi MQTT / Home Assistant Discovery and OT poll budgets; Zigbee-oriented `knowledge/` playbooks remain historical/reference only. No further constitution amend is required for this feature unless product scope changes.
 
-**Rationale**: Spec FR-007/008 and go decision Option C.
+**Rationale**: Spec FR-007/008 and go decision Option C; governance mismatch closed by constitution MAJOR amend (see Sync Impact Report in `.specify/memory/constitution.md`).
 
 **Alternatives considered**: Dual-radio image — explicitly out of scope.
 

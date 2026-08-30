@@ -44,7 +44,7 @@ OpenTherm master↔slave health, distinct from MQTT availability.
 
 **Transitions**:
 - `healthy` → `unhealthy` when `consecutive_failures >= failure_threshold`
-- `unhealthy` → `healthy` after successful exchange(s); reset failure counter
+- `unhealthy` → `healthy` after one successful keepalive/status exchange; reset failure counter
 - Single isolated failure does not flip to unhealthy
 
 **HA projection**: `binary_sensor` boiler-link health (see contracts).
@@ -150,8 +150,8 @@ Explicit operator-visible rejection (FR-013).
 | `remote_writes_allowed` | bool | False while active |
 
 **Transitions**:
-- Link loss → active within 10 s (SC-004)
-- Link recovery + debounce → inactive; optional single retained ID 1 apply; then accept live writes
+- Link loss (Wi‑Fi STA disconnect/lost-IP or MQTT disconnect/error) starts entry timer → `active` within 10 s if still down (SC-004)
+- Link recovery (Wi‑Fi+MQTT healthy) + debounce → inactive; optional single retained ID 1 apply; then accept live writes
 
 ---
 

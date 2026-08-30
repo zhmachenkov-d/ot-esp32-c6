@@ -1,6 +1,6 @@
 # Implementation Plan: OpenTherm Wi‑Fi MQTT Gateway
 
-**Branch**: `001-wifi-mqtt-opentherm` | **Date**: 2026-08-30 | **Spec**: [spec.md](./spec.md)
+**Branch**: `features/001-wifi-mqtt-opentherm` | **Date**: 2026-08-30 | **Spec**: [spec.md](./spec.md)
 
 **Input**: Feature specification from `/specs/001-wifi-mqtt-opentherm/spec.md`
 
@@ -47,9 +47,7 @@ Technical approach: native ESP-IDF app (C) with `sazanof/opentherm` (validate on
 | Secrets | PASS | Credentials via SoftAP → NVS; `.env`/examples only in repo. |
 | Governance (product channel language) | PASS | Constitution **v2.0.0** aligns with Wi‑Fi MQTT / HA Discovery; Zigbee/Thread remain out of feature scope (FR-007/008). |
 
-**Gate result (pre-Phase 0)**: PASS WITH JUSTIFIED EXCEPTION (constitution Zigbee framing) — *superseded*.
-
-**Gate result (post-Phase 1)**: PASS — design artifacts stay MQTT/Wi‑Fi-only; constitution amended to v2.0.0 (2026-08-30).
+**Gate result (post-Phase 1)**: PASS — design artifacts stay MQTT/Wi‑Fi-only; constitution amended to v2.0.0 (2026-08-30). (Pre-Phase 0 “justified exception” for Zigbee constitution wording is historical only.)
 
 ## Project Structure
 
