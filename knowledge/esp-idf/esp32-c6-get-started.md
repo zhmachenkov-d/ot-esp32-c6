@@ -12,7 +12,7 @@ raw:
 
 ## Prerequisites
 
-- Board: [WeAct ESP32-C6-A](/esp32/weact-esp32-c6-a.md) or ESP32-C6-DevKitC-1
+- Board: [WeAct ESP32-C6 Mini](/zephyr/weact-esp32c6-mini.md) (project default); also [WeAct ESP32-C6-A](/esp32/weact-esp32-c6-a.md) / ESP32-C6-DevKitC-1
 - USB cable; Windows, Linux, or macOS host
 
 ## Software stack

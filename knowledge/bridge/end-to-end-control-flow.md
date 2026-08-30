@@ -13,7 +13,7 @@ How the **Bridge** firmware connects Zigbee cluster commands to OpenTherm master
 1. NVS + Zigbee stack init (`zb_ot_bridge`)
 2. `ot_catalog_init()` — load or prepare discovery catalog
 3. `ot_bridge_init()` — default CH on, water setpoints 60°C; `ot_poll_init()`
-4. OpenTherm master init on GPIO12/13 (configurable via menuconfig)
+4. OpenTherm master init on configured OT GPIOs (see [OpenTherm GPIO Wiring](/bridge/opentherm-gpio-wiring.md); menuconfig)
 5. `ot_catalog_start()` — discovery or boot validation (background)
 6. `zb_ot_bridge_start()` — register endpoints (ep 10–12 thermostats, ep 20 spillover, ep 21–29 discovery), defer join until OT precheck
 7. `ot_bridge_start()` — `ot_poll` task after catalog validated + OT precheck done
