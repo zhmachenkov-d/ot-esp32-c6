@@ -47,6 +47,25 @@ typedef enum {
 provision_boot_action_t provision_boot_action(bool has_wifi_credentials, bool has_mqtt_config,
                                               bool mqtt_tls, bool ca_pem_ok);
 
+/** SoftAP auth for host-testable AP param builder (maps to WIFI_AUTH_* on device). */
+enum {
+    PROVISION_SOFTAP_AUTH_OPEN = 0,
+    PROVISION_SOFTAP_AUTH_WPA2_PSK = 1,
+};
+
+typedef struct {
+    char ssid[33];
+    char password[65];
+    int authmode; /**< PROVISION_SOFTAP_AUTH_* */
+} provision_softap_ap_params_t;
+
+/**
+ * Build SoftAP SSID / WPA2-PSK params. Requires psk length 8–63.
+ * Returns false if inputs are invalid (caller must not start open SoftAP).
+ */
+bool provision_softap_build_ap_params(const char *device_id, const char *psk,
+                                      provision_softap_ap_params_t *out);
+
 esp_err_t provision_softap_start(const char *device_id);
 void provision_softap_stop(void);
 

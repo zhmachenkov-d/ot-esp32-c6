@@ -20,7 +20,7 @@ End-to-end checks that prove the feature works. Implementation lives under plann
 1. Build and flash firmware (target `esp32c6`) from `firmware/` once the app exists:
    - `idf.py set-target esp32c6`
    - `idf.py build flash monitor`
-2. On first boot, join **open** SoftAP `OTC6-XXXX`, open captive portal, submit Wi‑Fi + MQTT + CH min/max (defaults 10 / 90 °C).
+2. On first boot, join SoftAP `OTC6-XXXX` using the **WPA2-PSK** printed on the USB serial monitor (`SoftAP … WPA2-PSK password=…`), open captive portal, submit Wi‑Fi + MQTT + CH min/max (defaults 10 / 90 °C).
 3. Confirm device leaves SoftAP, joins STA, MQTT status `online`.
 
 ### MQTT TLS (private CA / self-signed)
@@ -38,9 +38,9 @@ Firmware verifies `mqtts` against a **provisioned CA or server PEM**, not the pu
 
 ### V1 — Commissioning (SC-005, FR-005)
 
-- **Steps**: Power unconfigured board → SoftAP portal → save settings.
-- **Expect**: STA + broker connect without serial credentials; HA shows device after discovery publish.
-- **Re-provision**: Hold GPIO9 ≥5 s → credentials cleared → SoftAP returns.
+- **Steps**: Power unconfigured board → read SoftAP PSK from serial → join SoftAP → portal → save settings.
+- **Expect**: STA + broker connect without compile-time credentials; HA shows device after discovery publish.
+- **Re-provision**: Hold GPIO9 ≥5 s → credentials cleared → SoftAP returns (same SoftAP PSK; check serial if needed).
 
 ### V2 — Discovery coverage (SC-007, FR-002/015)
 

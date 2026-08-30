@@ -246,20 +246,34 @@ static void dhcp_set_captive_portal_uri(void)
 
 esp_err_t provision_softap_start(const char *device_id)
 {
-    char ssid[32];
-    const char *suffix = device_id && strlen(device_id) >= 4 ? device_id + strlen(device_id) - 4 : "0000";
-    snprintf(ssid, sizeof(ssid), "%s%s", APP_SOFTAP_SSID_PREFIX, suffix);
+    char psk[NVS_SOFTAP_PSK_MAX];
+    esp_err_t err = nvs_store_ensure_softap_psk(psk, sizeof(psk));
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "SoftAP PSK unavailable: %s", esp_err_to_name(err));
+        return err;
+    }
+
+    provision_softap_ap_params_t ap_params;
+    if (!provision_softap_build_ap_params(device_id, psk, &ap_params)) {
+        ESP_LOGE(TAG, "SoftAP AP params invalid (PSK required)");
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (ap_params.authmode != PROVISION_SOFTAP_AUTH_WPA2_PSK) {
+        ESP_LOGE(TAG, "refusing open SoftAP");
+        return ESP_ERR_INVALID_STATE;
+    }
 
     esp_netif_create_default_wifi_ap();
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
     wifi_config_t ap = { 0 };
-    strncpy((char *)ap.ap.ssid, ssid, sizeof(ap.ap.ssid) - 1);
-    ap.ap.ssid_len = strlen(ssid);
+    strncpy((char *)ap.ap.ssid, ap_params.ssid, sizeof(ap.ap.ssid) - 1);
+    ap.ap.ssid_len = strlen(ap_params.ssid);
+    strncpy((char *)ap.ap.password, ap_params.password, sizeof(ap.ap.password) - 1);
     ap.ap.channel = 1;
     ap.ap.max_connection = 4;
-    ap.ap.authmode = WIFI_AUTH_OPEN; /* open SoftAP v1 */
+    ap.ap.authmode = WIFI_AUTH_WPA2_PSK;
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &ap));
     ESP_ERROR_CHECK(esp_wifi_start());
 
@@ -274,8 +288,11 @@ esp_err_t provision_softap_start(const char *device_id)
     }
 
     s_active = true;
-    ESP_LOGI(TAG, "SoftAP %s (open) — open %s/ in browser if portal does not pop up",
-             ssid, s_portal_uri[0] ? s_portal_uri : "http://192.168.4.1");
+    /* SoftAP PSK is logged for serial commissioning (label/QR may mirror this). */
+    ESP_LOGI(TAG,
+             "SoftAP %s WPA2-PSK password=%s — join then open %s/ if portal does not pop up",
+             ap_params.ssid, ap_params.password,
+             s_portal_uri[0] ? s_portal_uri : "http://192.168.4.1");
     return ESP_OK;
 }
 

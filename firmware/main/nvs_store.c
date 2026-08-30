@@ -4,6 +4,7 @@
 
 #include "esp_log.h"
 #include "esp_mac.h"
+#include "esp_random.h"
 #include "nvs.h"
 #include "nvs_flash.h"
 
@@ -175,6 +176,46 @@ esp_err_t nvs_store_clear_credentials(void)
         return err;
     }
     return nvs_store_mqtt_ca_clear();
+}
+
+esp_err_t nvs_store_ensure_softap_psk(char *psk, size_t cap)
+{
+    if (!psk || cap < NVS_SOFTAP_PSK_MAX) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    psk[0] = '\0';
+
+    nvs_handle_t h;
+    esp_err_t err = nvs_open(NS, NVS_READONLY, &h);
+    if (err == ESP_OK) {
+        size_t len = cap;
+        err = nvs_get_str(h, "softap_psk", psk, &len);
+        nvs_close(h);
+        if (err == ESP_OK && strlen(psk) >= 8) {
+            return ESP_OK;
+        }
+        psk[0] = '\0';
+    }
+
+    uint8_t rnd[8];
+    esp_fill_random(rnd, sizeof(rnd));
+    for (size_t i = 0; i < sizeof(rnd); i++) {
+        snprintf(psk + (i * 2), 3, "%02x", rnd[i]);
+    }
+
+    err = nvs_open(NS, NVS_READWRITE, &h);
+    if (err != ESP_OK) {
+        return err;
+    }
+    err = nvs_set_str(h, "softap_psk", psk);
+    if (err == ESP_OK) {
+        err = nvs_commit(h);
+    }
+    nvs_close(h);
+    if (err == ESP_OK) {
+        ESP_LOGI(TAG, "generated SoftAP WPA2-PSK (persisted)");
+    }
+    return err;
 }
 
 esp_err_t nvs_store_mqtt_ca_save(const char *pem)

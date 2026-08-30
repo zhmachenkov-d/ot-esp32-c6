@@ -19,7 +19,7 @@ Missing or corrupt MQTT CA while TLS is enabled MUST NOT open SoftAP; recover vi
 | Parameter | Value |
 |-----------|-------|
 | SSID | `OTC6-XXXX` (XXXX from device id suffix) |
-| Security | **Open** (no SoftAP password in v1; operator must be on the SoftAP SSID—physical presence) |
+| Security | **WPA2-PSK** — per-device random 16-hex PSK in NVS (`softap_psk`); logged on SoftAP start (serial); survives credential clear for label/QR |
 | Captive | DNS catch-all → HTTP UI on gateway AP IP |
 
 ## HTTP UI fields
@@ -50,5 +50,7 @@ When TLS is off, any previously stored CA PEM is cleared on save.
 ## Security notes
 
 - Credentials and CA PEM stored in NVS only; never commit
+- SoftAP uses WPA2-PSK so concurrent RF neighbors without the device PSK cannot join or sniff cleartext HTTP `POST /save`
+- SoftAP PSK is device-local (NVS); obtain it from serial log at SoftAP start, or a factory label/QR that mirrors the same value
 - With a provisioned CA PEM, the client verifies the broker against that trust anchor and skips certificate CN checks so LAN IPs work with self-signed Mosquitto certs
-- Portal is local to SoftAP network; v1 does not require authenticated SoftAP management beyond physical presence
+- Portal remains HTTP on the SoftAP network; association control is the SoftAP PSK (not portal login)

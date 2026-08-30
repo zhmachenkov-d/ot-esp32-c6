@@ -18,6 +18,8 @@ extern "C" {
 #define NVS_MQTT_PASS_MAX       64
 #define NVS_MQTT_CA_PEM_MAX     4096
 #define NVS_CATALOG_BLOB_MAX    520
+/** SoftAP WPA2-PSK: 16 hex chars + NUL (stable per device; not cleared with credentials). */
+#define NVS_SOFTAP_PSK_MAX      17
 
 typedef struct {
     char device_id[NVS_DEVICE_ID_MAX];
@@ -45,8 +47,14 @@ esp_err_t nvs_store_get(nvs_gateway_config_t *out);
 /** Persist full gateway config (credentials, CH bounds, last CH, identity). */
 esp_err_t nvs_store_save(const nvs_gateway_config_t *cfg);
 
-/** Clear Wi‑Fi + MQTT credentials (SoftAP re-provision). Keeps CH bounds / identity. */
+/** Clear Wi‑Fi + MQTT credentials (SoftAP re-provision). Keeps CH bounds / identity / SoftAP PSK. */
 esp_err_t nvs_store_clear_credentials(void);
+
+/**
+ * Load SoftAP WPA2-PSK from NVS, or generate and persist a random 16-hex PSK.
+ * Survives credential clear so serial/label/QR stay valid across re-provision.
+ */
+esp_err_t nvs_store_ensure_softap_psk(char *psk, size_t cap);
 
 /** Save last-accepted CH setpoint (°C). */
 esp_err_t nvs_store_set_last_ch_setpoint(float celsius);
