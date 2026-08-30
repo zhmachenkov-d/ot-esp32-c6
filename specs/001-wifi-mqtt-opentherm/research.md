@@ -42,10 +42,12 @@ All Technical Context unknowns and integration choices resolved below. Sources: 
 1. Start from IDs with `support=available` after read probe.
 2. Mark `writable=true` only when **both** hold:
    - The OpenTherm message directory / ID class marks the ID as master-controllable (write-data / write-flag class, **or** ID 0 master Status flags), **and**
-   - Either (a) the ID is in the **known write-safe set** (v1: **ID 0** Status master flags including CH enable, **ID 1** Control setpoint, plus any other IDs explicitly listed in `ot_catalog` fixtures as write-safe), **or** (b) a **safe write probe** succeeds: master write of the last-read raw value (or documented no-op bit pattern) returns ACK—never probe with invented setpoints or enable flips.
+   - Either (a) the ID is in the **known write-safe set** (v1: **ID 0** Status master flags including CH enable, **ID 1** Control setpoint, plus any other IDs explicitly listed under `firmware/tests/host/fixtures/` as write-safe), **or** (b) a **safe write probe** succeeds: master write of the last-read raw value (or documented no-op bit pattern) returns ACK—never probe with invented setpoints or enable flips.
 3. **ID 0 special case (normative)**: Catalog `writable=true` for ID 0 means HA may command **master Status bits** (at least CH enable). The firmware applies those bits on the mandatory Status **`READ-DATA(id=0, master_status, …)`** exchange—**never** `WRITE-DATA(id=0)` (matches `knowledge/opentherm/data-id-0-status.md`). Safe-probe for ID 0 is N/A; treat as write-safe by fixture when Status ACK is observed.
 4. If directory says non-writable (and not ID 0), or write probe fails / is skipped outside the known set → `writable=false` (read entity only when available).
 5. Never fabricate HA write controls for unsupported IDs.
+
+**Host fixtures**: OpenTherm protocol-mandatory Data IDs **0, 1, 3, 14, 17, 25** MUST appear in `firmware/tests/host/fixtures/` for catalog/discovery coverage (read classification); writable flags still follow directory + write-safe rules above.
 
 **Rationale**: FR-015 + existing `discovery-catalog` knowledge; SC-007 needs a known set S on boiler/simulator.
 
@@ -61,14 +63,14 @@ All Technical Context unknowns and integration choices resolved below. Sources: 
 
 | Kind | HA component | Examples |
 |------|--------------|----------|
-| Gateway online | LWT + `availability_topic` on all entities | `otc6/<id>/status` → `online`/`offline` |
+| Gateway online | Application `availability_topic` + LWT; Option A fail-safe timing | `otc6/<id>/status` → `online`/`offline` |
 | Boiler-link health | `binary_sensor` | healthy / unhealthy |
 | Readable continuous | `sensor` | ID 25 Tboiler, pressures, modulation, u8/u16 codes |
-| Readable flag8 / bitfield (whole ID) | `sensor` (raw) **plus** additive `binary_sensor` for documented bits | ID 0 Status raw entity always; flame/fault/CH-active projections when supported |
+| Readable flag8 / bitfield (whole ID) | `sensor` (raw) **plus** additive `binary_sensor` for v1 Status bits | ID 0 Status raw entity always; projections: fault, CH/DHW active, flame, CH enable when supported |
 | Writable numeric | `number` (min/max/step) | generic writable floats/ints; raw flag8 write |
 | Writable boolean / enable | `switch` | CH enable via ID 0 master Status flags on Status exchange (not WRITE-DATA) |
 | CH water climate UX | optional convenience `climate` for ID 1 + related status | MUST NOT replace per-ID entities (FR-002) |
-| CH setpoint reject | status topic `otc6/<id>/ot/1/rejection` (required); optional `event` / diagnostic `binary_sensor` | topic alone satisfies FR-013; entity is additive UX |
+| Command reject / failure | status topic `otc6/<id>/ot/<N>/rejection` (required for every writable N) | topic alone satisfies FR-004/013; optional `event` / diagnostic entity is additive UX |
 
 Normative encoding→component defaults: `data-model.md` Default HA component map; contract summary in `contracts/mqtt-ha-discovery.md`.
 
@@ -87,8 +89,8 @@ Publish retained discovery configs after catalog validation; re-publish on recon
 
 **Decision**:
 - Effective **max**: boiler CH max-limit Data ID when available (commonly **ID 57** / Max CH water setpoint); else SoftAP/NVS value seeded from firmware default **90.0 °C**.
-- Effective **min**: SoftAP/NVS seeded from firmware default **10.0 °C**. **v1 assumes no standard OpenTherm Data ID for CH Control setpoint lower limit**; use a boiler min-limit ID only if it is present in the catalog **and** listed in write-safe/bound fixtures (none required at ship). Do not invent a min-limit ID.
-- Out-of-range MQTT write: **reject** — no OT write, keep last-accepted reflected setpoint, publish explicit rejection on status topic `otc6/<id>/ot/1/rejection` (reason `out_of_range` + attempted value). Optional HA diagnostic/`event` discovery may mirror that signal later.
+- Effective **min**: SoftAP/NVS seeded from firmware default **10.0 °C**. **v1 assumes no standard OpenTherm Data ID for CH Control setpoint lower limit**; use a boiler min-limit ID only if it is present in the catalog **and** listed under `firmware/tests/host/fixtures/` (none required at ship). Do not invent a min-limit ID.
+- Out-of-range MQTT write: **reject** — no OT write, keep last-accepted reflected setpoint, publish explicit rejection on `otc6/<id>/ot/1/rejection` (reason `out_of_range` + attempted value). **Same `ot/<N>/rejection` pattern for every writable Data ID** on `rejected_failsafe` / `ot_failed`. Optional HA diagnostic/`event` discovery may mirror that signal later.
 - SoftAP UI persists operator fallback min/max (FR-014).
 
 **Rationale**: Matches FR-013 clarifications; ID 57 is the documented max-limit in project knowledge; no project-canonical min-limit ID exists, so SoftAP min is the default lower bound.
@@ -99,7 +101,7 @@ Publish retained discovery configs after catalog validation; re-publish on recon
 
 ## 6. Fail-safe and retained MQTT writes
 
-**Decision**: Wi‑Fi STA disconnect / lost-IP **or** MQTT client disconnect/error starts a fail-safe **entry timer** of **10 000 ms** (default; `app_config`); if the combined link stays unhealthy when the timer expires, enter fail-safe (SC-004) — continue OT keepalive/polling; **hold last commanded CH setpoint** (ID 1); refuse **all** remote Data ID writes until link healthy (FR-006). **Writes remain allowed until fail-safe becomes active.** While fail-safe is active, MQTT availability is **`offline`** (LWT / disconnect)—not `online` with write refusal only. Cancel the timer if Wi‑Fi and MQTT recover before expiry. On recovery: require **2 s** continuous Wi‑Fi STA + MQTT healthy (**link-up debounce**); then **apply at most one retained CH setpoint (ID 1)** if present, then follow live commands; ignore retained storms for other writables (do not apply retained non-ID-1 commands automatically).
+**Decision**: Wi‑Fi STA disconnect / lost-IP **or** MQTT client disconnect/error starts a fail-safe **entry timer** of **10 000 ms** (default; `app_config`); if the combined link stays unhealthy when the timer expires, enter fail-safe (SC-004) — continue OT keepalive/polling; **hold last commanded CH setpoint** (ID 1); refuse **all** remote Data ID writes until link healthy (FR-006). **Writes remain allowed until fail-safe becomes active.** **Option A**: **application** availability on `otc6/<id>/status` stays **`online` during the entry timer**; when fail-safe **becomes active**, publish retained **`offline`** (LWT also `offline`). Broker LWT alone MUST NOT enter fail-safe or permanently refuse writes before timer expiry; on reconnect before expiry, publish birth `online` and keep accepting writes. Cancel the timer if Wi‑Fi and MQTT recover before expiry. On recovery: require **2 s** continuous Wi‑Fi STA + MQTT healthy (**link-up debounce**); then **apply at most one retained CH setpoint (ID 1)** if present, then follow live commands; ignore retained storms for other writables (do not apply retained non-ID-1 commands automatically).
 
 **Rationale**: Spec Assumptions default; aligns with OTGateway-style emergency thinking without inventing new demand.
 
@@ -129,7 +131,7 @@ Publish retained discovery configs after catalog validation; re-publish on recon
 
 ## 9. Boiler-link health threshold
 
-**Decision**: Unhealthy after **3 consecutive failed** OT exchanges at ≥1 Hz keepalive/status cadence; healthy again after **one successful** keepalive/status exchange (FR-012). v1 uses consecutive count only (no separate time-window alternative). Distinct from MQTT LWT availability. **Unhealthy does not pre-reject MQTT writes** — still attempt OT (subject to fail-safe + ID 1 range); failure → `ot_failed`, not a `rejected_link` gate (FR-004).
+**Decision**: Unhealthy after **3 consecutive failed** OT **keepalive/status** exchanges at ≥1 Hz cadence (**not** tiered catalog reads); healthy again after **one successful** keepalive/status exchange (FR-012). v1 uses consecutive count only (no separate time-window alternative). Distinct from MQTT LWT availability. **Unhealthy does not pre-reject MQTT writes** — still attempt OT (subject to fail-safe + ID 1 range); failure → `ot_failed` + `ot/<N>/rejection`, not a `rejected_link` gate (FR-004).
 
 **Rationale**: Clarification session default; avoids flapping on single glitch; keeps command path aligned with “observe non-success” rather than inventing a second refuse mode beside fail-safe.
 
@@ -166,7 +168,10 @@ Publish retained discovery configs after catalog validation; re-publish on recon
 | Testing | Host unit + HIL/quickstart |
 | HA entity types | Table in §4 |
 | SoftAP / button | **Open** SoftAP portal; GPIO9 ≥5 s |
-| Fail-safe / retained | Hold last CH; refuse writes; ≤1 retained ID 1 after **2 s** link-up debounce |
+| Fail-safe / retained | Hold last CH; refuse writes after **10 s** entry timer; **Option A** app availability online during timer; ≤1 retained ID 1 after **2 s** link-up debounce |
 | CH default min/max | 10.0 / 90.0 °C |
 | Topic namespace | `otc6/<device_id>/` |
+| Host fixtures | `firmware/tests/host/fixtures/`; mandatory IDs **0, 1, 3, 14, 17, 25** |
+| Rejection topics | `ot/<N>/rejection` for every writable N |
+| Boiler-link counting | Keepalive/status only |
 | Zigbee/Thread | Absent from design |

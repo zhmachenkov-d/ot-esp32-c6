@@ -46,10 +46,10 @@ End-to-end checks that prove the feature works. Implementation lives under plann
 - **Steps**: From HA, set in-range ID 1 (and a Status/CH-enable control if in S).
 - **Expect**: OT write occurs; reflected state within **2 s**; CH enable uses Status write path when supported (not only zeroing setpoint).
 
-### V5 — Out-of-range reject (FR-013)
+### V5 — Out-of-range / command reject (FR-013 / FR-004)
 
-- **Steps**: Publish CH setpoint outside effective min/max.
-- **Expect**: No out-of-range OT write; reflected setpoint unchanged; rejection topic/entity fires (`out_of_range`).
+- **Steps**: Publish CH setpoint outside effective min/max; optionally force an OT write failure on another writable ID.
+- **Expect**: No out-of-range OT write; reflected setpoint unchanged; `ot/1/rejection` fires (`out_of_range`). Other writable failures publish `ot/<N>/rejection` (optional HA entity not required).
 
 ### V6 — Keepalive under load (SC-003, FR-011)
 
@@ -58,12 +58,12 @@ End-to-end checks that prove the feature works. Implementation lives under plann
 
 ### V7 — Fail-safe (SC-004, FR-006)
 
-- **Steps**: Stop broker or drop Wi‑Fi during normal heat demand.
-- **Expect**: After the **10 000 ms** entry timer (default), fail-safe active; MQTT availability `offline` (LWT); OT keepalive continues; last CH setpoint held; remote writes refused once fail-safe is active (writes may still apply during the pre-entry timer); on restore, after **2 s** link-up debounce entities recover; no retained write spiral (at most one retained ID 1).
+- **Steps**: Stop broker or drop Wi‑Fi during normal heat demand; observe through the entry timer; restore.
+- **Expect**: During the **10 000 ms** entry timer, application availability stays **`online`** and writes may still apply (Option A). After the timer, fail-safe active; application availability **`offline`**; OT keepalive continues; last CH setpoint held; remote writes refused (`ot/<N>/rejection` / `rejected_failsafe`); on restore, after **2 s** link-up debounce entities recover; no retained write spiral (at most one retained ID 1).
 
 ### V8 — Boiler-link vs MQTT availability (FR-012)
 
-- **Steps**: Break OT adapter path only (Wi‑Fi/MQTT still up) until 3 consecutive OT failures; then restore OT.
+- **Steps**: Break OT adapter path only (Wi‑Fi/MQTT still up) until 3 consecutive **keepalive/status** failures; then restore OT.
 - **Expect**: MQTT stays `online`; boiler-link → `unhealthy` then `healthy`; not solely mirrored as generic entity unavailable without the health entity changing.
 
 ### V9 — Out-of-scope transports (SC-006)
@@ -73,7 +73,7 @@ End-to-end checks that prove the feature works. Implementation lives under plann
 
 ## Host tests (CI / pre-flash)
 
-Once `firmware/tests/host` exists, run the host suite for: f8.8 encoding, catalog classification fixtures, ID 1 reject bounds, discovery JSON shape, Status flag projections, fail-safe FSM. Prefer these before HIL for regressions.
+Once `firmware/tests/host` exists, run the host suite for: f8.8 encoding, catalog classification fixtures (`firmware/tests/host/fixtures/` incl. mandatory IDs 0/1/3/14/17/25), ID 1 reject bounds, per-ID `ot/<N>/rejection`, discovery JSON shape, Status flag projections (fault/CH/DHW/flame/CH enable), fail-safe FSM (Option A). Prefer these before HIL for regressions.
 
 ## Traceability
 
@@ -83,7 +83,7 @@ Once `firmware/tests/host` exists, run the host suite for: f8.8 encoding, catalo
 | V2 | US1-A2/A5, FR-002/015, SC-007 |
 | V3 | US1-A3, FR-003, SC-001 |
 | V4 | US2, FR-004, SC-002 |
-| V5 | US2-A2, FR-013 |
+| V5 | US2-A2/A3, FR-004/013 |
 | V6 | FR-011, SC-003 |
 | V7 | US3, FR-006, SC-004 |
 | V8 | FR-012 |
