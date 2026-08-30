@@ -20,7 +20,7 @@ End-to-end checks that prove the feature works. Implementation lives under plann
 1. Build and flash firmware (target `esp32c6`) from `firmware/` once the app exists:
    - `idf.py set-target esp32c6`
    - `idf.py build flash monitor`
-2. On first boot, join SoftAP `OTC6-XXXX`, open captive portal, submit Wi‑Fi + MQTT + CH min/max (defaults 10 / 90 °C).
+2. On first boot, join **open** SoftAP `OTC6-XXXX`, open captive portal, submit Wi‑Fi + MQTT + CH min/max (defaults 10 / 90 °C).
 3. Confirm device leaves SoftAP, joins STA, MQTT status `online`.
 
 ## Validation scenarios
@@ -59,7 +59,7 @@ End-to-end checks that prove the feature works. Implementation lives under plann
 ### V7 — Fail-safe (SC-004, FR-006)
 
 - **Steps**: Stop broker or drop Wi‑Fi during normal heat demand.
-- **Expect**: Within **10 s**, fail-safe active; MQTT availability `offline` (LWT); OT keepalive continues; last CH setpoint held; remote writes refused once fail-safe is active (writes may still apply during the pre-entry timer); on restore, after **2 s** link-up debounce entities recover; no retained write spiral (at most one retained ID 1).
+- **Expect**: After the **10 000 ms** entry timer (default), fail-safe active; MQTT availability `offline` (LWT); OT keepalive continues; last CH setpoint held; remote writes refused once fail-safe is active (writes may still apply during the pre-entry timer); on restore, after **2 s** link-up debounce entities recover; no retained write spiral (at most one retained ID 1).
 
 ### V8 — Boiler-link vs MQTT availability (FR-012)
 
@@ -73,7 +73,7 @@ End-to-end checks that prove the feature works. Implementation lives under plann
 
 ## Host tests (CI / pre-flash)
 
-Once `firmware/tests/host` exists, run the host suite for: f8.8 encoding, catalog classification fixtures, ID 1 reject bounds, discovery JSON shape, fail-safe FSM. Prefer these before HIL for regressions.
+Once `firmware/tests/host` exists, run the host suite for: f8.8 encoding, catalog classification fixtures, ID 1 reject bounds, discovery JSON shape, Status flag projections, fail-safe FSM. Prefer these before HIL for regressions.
 
 ## Traceability
 

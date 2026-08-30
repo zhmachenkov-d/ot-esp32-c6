@@ -41,7 +41,7 @@ Consistent operator-visible behavior when a value cannot be shown (constitution 
 | Device MQTT `offline` (LWT / disconnect) | Entities using `availability_topic` become unavailable via HA availability — do not invent fresh OT values |
 | Boiler-link `unhealthy` | Keep publishing `boiler_link=unhealthy`; for Data ID state topics that have no valid last sample **or** whose last exchange failed after unhealthy threshold: publish state payload **empty string** (HA treats as unknown/unavailable). Do **not** publish fabricated numeric zeros |
 | `DATA-INVALID` / no valid decode yet | Same empty-string state on `ot/<N>/state` until a valid ACK sample exists; discovery entity may remain configured |
-| Fail-safe active (Wi‑Fi or MQTT down) | MQTT availability is `offline` (LWT / disconnect); OT keepalive continues locally; any command still delivered before offline is observed → `rejected_failsafe`; reflected states stay last accepted (or empty if never accepted)—not false success. During the pre-entry timer only, availability may still be `online` and writes may still apply (FR-006) |
+| Fail-safe active (Wi‑Fi or MQTT down) | MQTT availability is `offline` (LWT / disconnect); OT keepalive continues locally; any command still delivered before offline is observed → `rejected_failsafe`; reflected states stay last accepted (or empty if never accepted)—not false success. During the **10 000 ms** pre-entry timer only, availability may still be `online` and writes may still apply (FR-006) |
 
 Do not use topic-specific one-off unavailable encodings. Empty string is the v1 sentinel for “no valid value” on per-ID state topics.
 

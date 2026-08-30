@@ -18,7 +18,7 @@ Sustained Wi‑Fi/MQTT failure alone MUST NOT open SoftAP in v1.
 | Parameter | Value |
 |-----------|-------|
 | SSID | `OTC6-XXXX` (XXXX from device id suffix) |
-| Security | Open or WPA2 with printed/default doc’d password (implementation choice; document in quickstart) |
+| Security | **Open** (no SoftAP password in v1; operator must be on the SoftAP SSID—physical presence) |
 | Captive | DNS catch-all → HTTP UI on gateway AP IP |
 
 ## HTTP UI fields

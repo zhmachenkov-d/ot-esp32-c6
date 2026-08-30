@@ -26,7 +26,7 @@ Technical approach: native ESP-IDF app (C) with `sazanof/opentherm` (validate on
 
 **Project Type**: Embedded firmware (single ESP-IDF application + components)
 
-**Performance Goals**: OT keepalive/status ≥1 cycle/s (SC-003); readable ID → HA within 5 s of successful OT read (SC-001); writable command → OT attempt + reflected state within 2 s (SC-002); fail-safe entered within 10 s of Wi‑Fi/MQTT loss (SC-004)
+**Performance Goals**: OT keepalive/status ≥1 cycle/s (SC-003); readable ID → HA within 5 s of successful OT read (SC-001); writable command → OT attempt + reflected state within 2 s (SC-002); fail-safe entered after **10 000 ms** sustained link-loss entry timer (SC-004)
 
 **Constraints**: No Zigbee / no OpenThread in delivered image (FR-007/008); SoftAP + button long-press re-provision only (FR-005); reject out-of-range CH setpoint with explicit signal (FR-013); HA messaging must not starve OT (FR-011); secrets never in git. **Resource budgets (soft, ESP32-C6FH4)**: application firmware `.bin` MUST stay **≤ 1.5 MiB** (PR SHOULD note size if **> 1.2 MiB**); after OT poll + MQTT connected, free heap MUST remain **≥ 64 KiB**. Record both in T043 / `idf.py size` (or equivalent).
 

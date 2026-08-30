@@ -33,7 +33,7 @@ description: "Task list for OpenTherm Wi‑Fi MQTT Gateway implementation"
 
 - [ ] T001 Create ESP-IDF project skeleton under `firmware/` (`CMakeLists.txt`, `sdkconfig.defaults`, `main/CMakeLists.txt`, empty `main/main.c`) per plan.md
 - [ ] T002 [P] Add IDF Component Manager deps in `firmware/idf_component.yml` for `sazanof/opentherm` (^1.0.3+) and `espressif/mqtt`
-- [ ] T003 [P] Create compile-time defaults in `firmware/main/app_config.h` (GPIO in=2 / out=3, SoftAP button GPIO9 ≥5 s, CH min/max 10.0/90.0, boiler-link failure threshold 3, **link-up debounce 2000 ms**, topic root `otc6/`)
+- [ ] T003 [P] Create compile-time defaults in `firmware/main/app_config.h` (GPIO in=2 / out=3, SoftAP button GPIO9 ≥5 s, CH min/max 10.0/90.0, boiler-link failure threshold 3, **fail-safe entry timer 10 000 ms**, **link-up debounce 2000 ms**, topic root `otc6/`)
 - [ ] T004 [P] Scaffold host test harness under `firmware/tests/host/` (CMake/`idf.py` host-test entry for **Unity** suites)
 - [ ] T005 [P] Add HIL scenario stubs in `firmware/tests/hil/` that mirror quickstart.md V1–V9 checklists
 
@@ -71,11 +71,12 @@ description: "Task list for OpenTherm Wi‑Fi MQTT Gateway implementation"
 ### Tests for User Story 1
 
 - [ ] T015 [P] [US1] Add host tests for MQTT Discovery JSON shape (device block, availability, boiler-link, per-ID sensor) in `firmware/tests/host/test_mqtt_discovery.c`
+- [ ] T015b [P] [US1] Add host tests for Data ID 0 Status flag additive discovery/state projections (`binary_sensor` / `switch` payloads; ID 0 entity still present) in `firmware/tests/host/test_status_projections.c` (fixtures aligned with `knowledge/opentherm/data-id-0-status.md`)
 - [ ] T016 [P] [US1] Add host tests for SoftAP form validation (required Wi‑Fi/MQTT host/port, optional MQTT user/password/TLS, `ch_min_c` < `ch_max_c`) in `firmware/tests/host/test_provision_validate.c`
 
 ### Implementation for User Story 1
 
-- [ ] T017 [US1] Implement SoftAP + captive-portal HTTP UI per `contracts/softap-provisioning.md` (Wi‑Fi SSID/password, MQTT host/port/username/password/TLS, CH min/max) and NVS save/exit in `firmware/main/provision_softap.c` and `firmware/main/provision_softap.h`
+- [ ] T017 [US1] Implement SoftAP + captive-portal HTTP UI per `contracts/softap-provisioning.md` (**open** SoftAP; Wi‑Fi SSID/password, MQTT host/port/username/password/TLS, CH min/max) and NVS save/exit in `firmware/main/provision_softap.c` and `firmware/main/provision_softap.h`
 - [ ] T018 [US1] Implement GPIO9 ≥5 s long-press re-provision (clear Wi‑Fi/MQTT credentials, force SoftAP) in `firmware/main/provision_softap.c`
 - [ ] T019 [P] [US1] Implement boiler-link health state machine (unhealthy after 3 consecutive failures; **healthy after one successful** keepalive/status exchange) publishing `otc6/<device_id>/boiler_link` in `firmware/main/mqtt_ha.c` / `firmware/main/ot_poll.c` as needed
 - [ ] T020 [US1] Implement HA MQTT Discovery publisher for meta entities + every catalog-readable Data ID in `firmware/main/mqtt_discovery.c` and `firmware/main/mqtt_discovery.h` per `contracts/mqtt-ha-discovery.md` (no custom HA Core integration — FR-009)
@@ -117,9 +118,9 @@ description: "Task list for OpenTherm Wi‑Fi MQTT Gateway implementation"
 
 ## Phase 5: User Story 3 - Heating stays defined when Home Assistant is unreachable (Priority: P2)
 
-**Goal**: On Wi‑Fi/MQTT loss within 10 s, enter fail-safe: keep OT alive, hold last CH setpoint, refuse remote writes; on recovery, resume cleanly without retained write spirals
+**Goal**: On Wi‑Fi/MQTT loss, after the **10 000 ms** entry timer, enter fail-safe: keep OT alive, hold last CH setpoint, refuse remote writes; on recovery, resume cleanly without retained write spirals
 
-**Independent Test**: Drop Wi‑Fi or stop broker during demand; confirm fail-safe within 10 s and OT keepalive; restore link and accept fresh commands (quickstart V7)
+**Independent Test**: Drop Wi‑Fi or stop broker during demand; confirm fail-safe after **10 000 ms** entry timer and OT keepalive; restore link and accept fresh commands (quickstart V7)
 
 ### Tests for User Story 3
 
@@ -127,7 +128,7 @@ description: "Task list for OpenTherm Wi‑Fi MQTT Gateway implementation"
 
 ### Implementation for User Story 3
 
-- [ ] T035 [US3] Implement fail-safe detection in `firmware/main/failsafe.c` and `firmware/main/failsafe.h`: Wi‑Fi STA disconnect / lost-IP **or** MQTT disconnect/client error starts a timer; enter fail-safe **within 10 s** of sustained link loss (SC-004); clear/cancel the timer on Wi‑Fi+MQTT healthy again; **remote writes remain allowed until fail-safe becomes active** (FR-006)
+- [ ] T035 [US3] Implement fail-safe detection in `firmware/main/failsafe.c` and `firmware/main/failsafe.h`: Wi‑Fi STA disconnect / lost-IP **or** MQTT disconnect/client error starts the **10 000 ms** entry timer from `app_config.h`; enter fail-safe when the timer expires while link still down (SC-004); clear/cancel the timer on Wi‑Fi+MQTT healthy again; **remote writes remain allowed until fail-safe becomes active** (FR-006)
 - [ ] T036 [US3] While fail-safe active: continue OT keepalive/polling, hold last accepted CH setpoint on the wire, set `remote_writes_allowed=false` in `firmware/main/failsafe.c` integrated with `firmware/main/ot_poll.c` and `firmware/main/mqtt_commands.c`
 - [ ] T037 [US3] On link recovery: wait **2 s** continuous Wi‑Fi+MQTT healthy (link-up debounce from `app_config.h`), apply at most one retained ID 1 if present, ignore retained storms for other writables, then accept live commands in `firmware/main/failsafe.c` / `firmware/main/mqtt_commands.c`
 - [ ] T038 [US3] Wire fail-safe into `firmware/main/main.c` and MQTT availability so that while fail-safe is active HA sees MQTT **`offline`** (LWT) / unavailable—not `online` with silent write drops—and no invented heat demand
@@ -176,7 +177,7 @@ description: "Task list for OpenTherm Wi‑Fi MQTT Gateway implementation"
 
 - Phase 1: T002–T005 in parallel after T001
 - Phase 2: T007 parallel with T006; T013 parallel with T011–T012 once APIs exist; T008b only after T008 fails (sequential, not parallel)
-- US1: T015–T016 parallel; T019 parallel with T017–T018; T021b **after** T020/T021 (same files); T024b parallel with T024
+- US1: T015–T016 parallel (incl. T015b); T019 parallel with T017–T018; T021b **after** T020/T021 (same files); T024b parallel with T024
 - US2: T025–T026 and T027 parallel before command wiring
 - US3: T034 parallel with early failsafe skeleton
 - Polish: T040, T041, T042, T044 parallel
@@ -188,6 +189,7 @@ description: "Task list for OpenTherm Wi‑Fi MQTT Gateway implementation"
 ```bash
 # Host tests in parallel:
 Task: "Add host tests for MQTT Discovery JSON in firmware/tests/host/test_mqtt_discovery.c"
+Task: "Add host tests for Status flag projections in firmware/tests/host/test_status_projections.c"
 Task: "Add host tests for SoftAP form validation in firmware/tests/host/test_provision_validate.c"
 
 # After SoftAP core:

@@ -22,7 +22,7 @@ Single embedded controller instance.
 | `ch_min_c` / `ch_max_c` | float | SoftAP fallback bounds; seeded 10.0 / 90.0 |
 | `provisioning` | bool | SoftAP active |
 | `mqtt_link` | enum | `up` \| `down` |
-| `failsafe` | bool | True when Wi‑Fi or MQTT unavailable per FR-006 |
+| `failsafe` | bool | True when `FailSafeState.active` (entry timer expired while link still down)—**not** merely because Wi‑Fi/MQTT just dropped |
 | `last_accepted_ch_setpoint_c` | float \| null | Held across fail-safe |
 
 **Validation**: MQTT host non-empty when leaving SoftAP; `ch_min_c` < `ch_max_c`; credentials never logged in plaintext.
@@ -147,12 +147,13 @@ Explicit operator-visible rejection (FR-013).
 | Field | Type | Notes |
 |-------|------|-------|
 | `active` | bool | |
+| `entry_timer_ms` | uint | Default **10 000** (SC-004 / FR-006); from `app_config` |
 | `entered_at` | timestamp | |
 | `held_ch_setpoint_c` | float | Last accepted |
 | `remote_writes_allowed` | bool | False while active |
 
 **Transitions**:
-- Link loss (Wi‑Fi STA disconnect/lost-IP or MQTT disconnect/error) starts entry timer → `active` within 10 s if still down (SC-004); **remote writes allowed until `active`**
+- Link loss (Wi‑Fi STA disconnect/lost-IP or MQTT disconnect/error) starts entry timer (`entry_timer_ms`, default **10 000**); on expiry while still down → `active` (SC-004); cancel timer if Wi‑Fi+MQTT recover before expiry; **remote writes allowed until `active`**
 - While `active`: MQTT availability is `offline` (LWT); `remote_writes_allowed=false`
 - Link recovery: Wi‑Fi+MQTT healthy continuously for **2 s** (link-up debounce) → inactive; optional single retained ID 1 apply; then accept live writes
 

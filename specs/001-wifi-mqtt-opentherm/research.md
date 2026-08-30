@@ -99,7 +99,7 @@ Publish retained discovery configs after catalog validation; re-publish on recon
 
 ## 6. Fail-safe and retained MQTT writes
 
-**Decision**: Wi‑Fi STA disconnect / lost-IP **or** MQTT client disconnect/error starts a fail-safe entry timer; if the combined link stays unhealthy, enter fail-safe within **10 s** (SC-004) — continue OT keepalive/polling; **hold last commanded CH setpoint** (ID 1); refuse **all** remote Data ID writes until link healthy (FR-006). **Writes remain allowed until fail-safe becomes active.** While fail-safe is active, MQTT availability is **`offline`** (LWT / disconnect)—not `online` with write refusal only. Cancel the timer if Wi‑Fi and MQTT recover before expiry. On recovery: require **2 s** continuous Wi‑Fi STA + MQTT healthy (**link-up debounce**); then **apply at most one retained CH setpoint (ID 1)** if present, then follow live commands; ignore retained storms for other writables (do not apply retained non-ID-1 commands automatically).
+**Decision**: Wi‑Fi STA disconnect / lost-IP **or** MQTT client disconnect/error starts a fail-safe **entry timer** of **10 000 ms** (default; `app_config`); if the combined link stays unhealthy when the timer expires, enter fail-safe (SC-004) — continue OT keepalive/polling; **hold last commanded CH setpoint** (ID 1); refuse **all** remote Data ID writes until link healthy (FR-006). **Writes remain allowed until fail-safe becomes active.** While fail-safe is active, MQTT availability is **`offline`** (LWT / disconnect)—not `online` with write refusal only. Cancel the timer if Wi‑Fi and MQTT recover before expiry. On recovery: require **2 s** continuous Wi‑Fi STA + MQTT healthy (**link-up debounce**); then **apply at most one retained CH setpoint (ID 1)** if present, then follow live commands; ignore retained storms for other writables (do not apply retained non-ID-1 commands automatically).
 
 **Rationale**: Spec Assumptions default; aligns with OTGateway-style emergency thinking without inventing new demand.
 
@@ -109,7 +109,7 @@ Publish retained discovery configs after catalog validation; re-publish on recon
 
 ## 7. SoftAP / captive portal and re-provision
 
-**Decision**: First boot (no credentials) and button-triggered re-provision: start SoftAP (e.g. `OTC6-XXXX`), DNS captive redirect to local HTTP UI (`esp_http_server`) collecting Wi‑Fi SSID/password, MQTT host/port/user/password, optional TLS toggle (off by default for trusted LAN), and CH min/max fallbacks. Persist to NVS; switch to STA; stop SoftAP. **Re-entry**: WeAct user button **GPIO9**, long-press **≥5 s** clears Wi‑Fi/MQTT credentials and forces SoftAP (FR-005). Sustained join/broker failure alone does **not** open SoftAP in v1.
+**Decision**: First boot (no credentials) and button-triggered re-provision: start SoftAP (e.g. `OTC6-XXXX`), **open** SoftAP (no WPA password in v1; physical presence on the SoftAP SSID is the access control), DNS captive redirect to local HTTP UI (`esp_http_server`) collecting Wi‑Fi SSID/password, MQTT host/port/user/password, optional TLS toggle (off by default for trusted LAN), and CH min/max fallbacks. Persist to NVS; switch to STA; stop SoftAP. **Re-entry**: WeAct user button **GPIO9**, long-press **≥5 s** clears Wi‑Fi/MQTT credentials and forces SoftAP (FR-005). Sustained join/broker failure alone does **not** open SoftAP in v1.
 
 **Rationale**: Spec clarifications; board has SW2 on IO9; 5 s reduces accidental wipe.
 
@@ -129,7 +129,7 @@ Publish retained discovery configs after catalog validation; re-publish on recon
 
 ## 9. Boiler-link health threshold
 
-**Decision**: Unhealthy after **3 consecutive failed** OT exchanges at ≥1 Hz keepalive/status cadence (or equivalent ~3 s window); healthy again after **one successful** keepalive/status exchange (FR-012). Distinct from MQTT LWT availability. **Unhealthy does not pre-reject MQTT writes** — still attempt OT (subject to fail-safe + ID 1 range); failure → `ot_failed`, not a `rejected_link` gate (FR-004).
+**Decision**: Unhealthy after **3 consecutive failed** OT exchanges at ≥1 Hz keepalive/status cadence; healthy again after **one successful** keepalive/status exchange (FR-012). v1 uses consecutive count only (no separate time-window alternative). Distinct from MQTT LWT availability. **Unhealthy does not pre-reject MQTT writes** — still attempt OT (subject to fail-safe + ID 1 range); failure → `ot_failed`, not a `rejected_link` gate (FR-004).
 
 **Rationale**: Clarification session default; avoids flapping on single glitch; keeps command path aligned with “observe non-success” rather than inventing a second refuse mode beside fail-safe.
 
@@ -165,7 +165,7 @@ Publish retained discovery configs after catalog validation; re-publish on recon
 | Storage | NVS |
 | Testing | Host unit + HIL/quickstart |
 | HA entity types | Table in §4 |
-| SoftAP / button | SoftAP portal; GPIO9 ≥5 s |
+| SoftAP / button | **Open** SoftAP portal; GPIO9 ≥5 s |
 | Fail-safe / retained | Hold last CH; refuse writes; ≤1 retained ID 1 after **2 s** link-up debounce |
 | CH default min/max | 10.0 / 90.0 °C |
 | Topic namespace | `otc6/<device_id>/` |
