@@ -23,9 +23,41 @@ static float s_ch_min = APP_CH_MIN_C_DEFAULT;
 static float s_ch_max = APP_CH_MAX_C_DEFAULT;
 static failsafe_state_t *s_fs;
 
+static bool s_pending[OT_CATALOG_MAX_IDS];
+static float s_pending_f[OT_CATALOG_MAX_IDS];
+
+static bool s_post_recovery;
+static bool s_retained_id1_applied;
+
 void mqtt_commands_set_failsafe(failsafe_state_t *fs)
 {
     s_fs = fs;
+}
+
+void mqtt_commands_begin_post_recovery(void)
+{
+    s_post_recovery = true;
+    s_retained_id1_applied = false;
+}
+
+bool mqtt_commands_allow_inbound(uint8_t data_id, bool retain)
+{
+    if (!s_post_recovery) {
+        return true;
+    }
+    if (!retain) {
+        s_post_recovery = false;
+        return true;
+    }
+    /* Retained storm gate */
+    if (data_id != 1) {
+        return false;
+    }
+    if (s_retained_id1_applied) {
+        return false;
+    }
+    s_retained_id1_applied = true;
+    return true;
 }
 
 const char *mqtt_commands_reason_wire(writable_cmd_outcome_t outcome)
@@ -62,6 +94,63 @@ esp_err_t mqtt_commands_publish_rejection(const char *device_id, uint8_t id,
     return mqtt_ha_publish(topic, json, 1, false);
 }
 
+static void publish_accepted_state(uint8_t id, float value_f)
+{
+    char state[32];
+    if (id == 0) {
+        snprintf(state, sizeof(state), "%s", value_f > 0.5f ? "1" : "0");
+    } else {
+        ot_codec_format_float(state, sizeof(state), value_f, true);
+    }
+    mqtt_discovery_publish_state(s_device_id, id, state);
+    if (id == 0) {
+        mqtt_discovery_publish_status_projections(s_device_id,
+                                                  ot_poll_get_master_status_flags(),
+                                                  ot_poll_get_slave_status_flags(),
+                                                  true);
+        mqtt_discovery_publish_climate_mode(s_device_id,
+                                            value_f > 0.5f);
+    }
+}
+
+writable_cmd_outcome_t mqtt_commands_on_write_complete(uint8_t data_id,
+                                                       ot_exchange_result_t result,
+                                                       writable_command_t *out_cmd)
+{
+    writable_command_t cmd = { .data_id = data_id, .outcome = WRITABLE_CMD_OT_FAILED };
+    if (data_id >= OT_CATALOG_MAX_IDS || !s_pending[data_id]) {
+        if (out_cmd) {
+            *out_cmd = cmd;
+        }
+        return cmd.outcome;
+    }
+    cmd.value_f = s_pending_f[data_id];
+    s_pending[data_id] = false;
+
+    if (result == OT_EXCHANGE_OK) {
+        cmd.outcome = WRITABLE_CMD_ACCEPTED;
+        if (data_id == 1) {
+            nvs_store_set_last_ch_setpoint(cmd.value_f);
+        }
+        publish_accepted_state(data_id, cmd.value_f);
+    } else {
+        cmd.outcome = WRITABLE_CMD_OT_FAILED;
+        mqtt_commands_publish_rejection(s_device_id, data_id, cmd.outcome, cmd.value_f, NULL);
+        ESP_LOGW(TAG, "OT write failed id=%u", (unsigned)data_id);
+    }
+    if (out_cmd) {
+        *out_cmd = cmd;
+    }
+    return cmd.outcome;
+}
+
+static void on_ot_write_complete(uint8_t data_id, uint16_t raw, ot_exchange_result_t result, void *ctx)
+{
+    (void)raw;
+    (void)ctx;
+    mqtt_commands_on_write_complete(data_id, result, NULL);
+}
+
 writable_cmd_outcome_t mqtt_commands_handle(uint8_t data_id, const char *payload,
                                             bool remote_writes_allowed,
                                             writable_command_t *out_cmd)
@@ -96,7 +185,10 @@ writable_cmd_outcome_t mqtt_commands_handle(uint8_t data_id, const char *payload
     /* ID 0: CH enable via master Status flags on READ exchange — never WRITE-DATA */
     if (data_id == 0) {
         bool on = (strcmp(payload, "1") == 0 || strcasecmp(payload, "ON") == 0 ||
-                   strcasecmp(payload, "true") == 0);
+                   strcasecmp(payload, "true") == 0 || strcasecmp(payload, "heat") == 0);
+        if (strcasecmp(payload, "off") == 0 || strcmp(payload, "0") == 0) {
+            on = false;
+        }
         uint8_t hb = ot_poll_get_master_status_flags();
         hb = ot_codec_flag8_set(hb, 0, on);
         ot_poll_set_master_status_flags(hb);
@@ -138,10 +230,12 @@ writable_cmd_outcome_t mqtt_commands_handle(uint8_t data_id, const char *payload
     if (!ot_poll_enqueue_write(data_id, raw)) {
         cmd.outcome = WRITABLE_CMD_OT_FAILED;
     } else {
-        cmd.outcome = WRITABLE_CMD_ACCEPTED;
-        if (data_id == 1) {
-            nvs_store_set_last_ch_setpoint(v);
+        /* Enqueue is not acceptance — wait for OT write completion (T045). */
+        if (data_id < OT_CATALOG_MAX_IDS) {
+            s_pending[data_id] = true;
+            s_pending_f[data_id] = v;
         }
+        cmd.outcome = WRITABLE_CMD_QUEUED;
     }
     if (out_cmd) {
         *out_cmd = cmd;
@@ -169,20 +263,16 @@ static bool parse_set_topic(const char *topic, uint8_t *id_out)
     return true;
 }
 
-static void on_mqtt_message(const char *topic, const char *payload, int len, void *ctx)
+static bool is_climate_mode_set(const char *topic)
 {
-    (void)len;
-    (void)ctx;
-    uint8_t id;
-    if (!parse_set_topic(topic, &id)) {
+    return topic && strstr(topic, "/climate/mode/set") != NULL;
+}
+
+static void apply_outcome(uint8_t id, writable_cmd_outcome_t o, const writable_command_t *cmd)
+{
+    if (o == WRITABLE_CMD_QUEUED) {
         return;
     }
-    bool allowed = true;
-    if (s_fs) {
-        allowed = failsafe_remote_writes_allowed(s_fs);
-    }
-    writable_command_t cmd;
-    writable_cmd_outcome_t o = mqtt_commands_handle(id, payload, allowed, &cmd);
     if (o != WRITABLE_CMD_ACCEPTED) {
         ot_setpoint_bounds_t b;
         const ot_setpoint_bounds_t *bp = NULL;
@@ -190,24 +280,36 @@ static void on_mqtt_message(const char *topic, const char *payload, int len, voi
             ot_catalog_resolve_bounds(s_cat, id, s_ch_min, s_ch_max, &b)) {
             bp = &b;
         }
-        mqtt_commands_publish_rejection(s_device_id, id, o, cmd.value_f, bp);
+        mqtt_commands_publish_rejection(s_device_id, id, o, cmd->value_f, bp);
         ESP_LOGW(TAG, "reject id=%u reason=%s", (unsigned)id, mqtt_commands_reason_wire(o));
         return;
     }
-    /* Reflect accepted state */
-    char state[32];
-    if (id == 0) {
-        snprintf(state, sizeof(state), "%s", cmd.value_f > 0.5f ? "1" : "0");
-    } else {
-        ot_codec_format_float(state, sizeof(state), cmd.value_f, true);
+    publish_accepted_state(id, cmd->value_f);
+}
+
+static void on_mqtt_message(const char *topic, const char *payload, int len, bool retain, void *ctx)
+{
+    (void)len;
+    (void)ctx;
+    uint8_t id;
+    if (is_climate_mode_set(topic)) {
+        id = 0;
+    } else if (!parse_set_topic(topic, &id)) {
+        return;
     }
-    mqtt_discovery_publish_state(s_device_id, id, state);
-    if (id == 0) {
-        mqtt_discovery_publish_status_projections(s_device_id,
-                                                  ot_poll_get_master_status_flags(),
-                                                  ot_poll_get_slave_status_flags(),
-                                                  true);
+
+    if (!mqtt_commands_allow_inbound(id, retain)) {
+        ESP_LOGI(TAG, "drop retained set id=%u (post-recovery policy)", (unsigned)id);
+        return;
     }
+
+    bool allowed = true;
+    if (s_fs) {
+        allowed = failsafe_remote_writes_allowed(s_fs);
+    }
+    writable_command_t cmd;
+    writable_cmd_outcome_t o = mqtt_commands_handle(id, payload, allowed, &cmd);
+    apply_outcome(id, o, &cmd);
 }
 
 esp_err_t mqtt_commands_init(const char *device_id, ot_catalog_t *cat,
@@ -220,6 +322,8 @@ esp_err_t mqtt_commands_init(const char *device_id, ot_catalog_t *cat,
     s_cat = cat;
     s_ch_min = softap_ch_min;
     s_ch_max = softap_ch_max;
+    memset(s_pending, 0, sizeof(s_pending));
+    ot_poll_set_write_complete_cb(on_ot_write_complete, NULL);
     mqtt_ha_set_message_callback(on_mqtt_message, NULL);
     return ESP_OK;
 }
@@ -236,5 +340,7 @@ esp_err_t mqtt_commands_start_subscriptions(void)
             mqtt_ha_subscribe(topic, 1);
         }
     }
+    snprintf(topic, sizeof(topic), "%s%s/climate/mode/set", APP_MQTT_TOPIC_ROOT, s_device_id);
+    mqtt_ha_subscribe(topic, 1);
     return ESP_OK;
 }

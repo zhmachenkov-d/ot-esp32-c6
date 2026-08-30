@@ -226,6 +226,13 @@ esp_err_t mqtt_discovery_publish_climate(const char *device_id, float ch_min, fl
     return ESP_OK;
 }
 
+esp_err_t mqtt_discovery_publish_climate_mode(const char *device_id, bool heat_on)
+{
+    char topic[96];
+    snprintf(topic, sizeof(topic), "%s%s/climate/mode", APP_MQTT_TOPIC_ROOT, device_id);
+    return mqtt_ha_publish(topic, heat_on ? "heat" : "off", 0, true);
+}
+
 static const char *id_name(uint8_t id)
 {
     switch (id) {

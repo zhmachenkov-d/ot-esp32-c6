@@ -10,6 +10,7 @@ idf_component_register(
         "mqtt_commands.c"
         "failsafe.c"
         "provision_softap.c"
+        "provision_validate.c"
     INCLUDE_DIRS "."
     REQUIRES
         nvs_flash

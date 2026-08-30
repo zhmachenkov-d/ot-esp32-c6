@@ -32,10 +32,18 @@ static float s_hold_ch_c;
 static uint32_t s_promote_until[OT_CATALOG_MAX_IDS];
 static ot_catalog_t *s_cat_ref;
 static bool s_inited;
+static ot_write_complete_cb_t s_write_cb;
+static void *s_write_cb_ctx;
 
 void ot_poll_set_catalog(struct ot_catalog *cat)
 {
     s_cat_ref = cat;
+}
+
+void ot_poll_set_write_complete_cb(ot_write_complete_cb_t cb, void *ctx)
+{
+    s_write_cb = cb;
+    s_write_cb_ctx = ctx;
 }
 static ot_exchange_result_t map_status(open_therm_response_status_t st, open_therm_message_type_t msg)
 {
@@ -262,8 +270,17 @@ static void poll_task(void *arg)
                     .request_value = wr.raw,
                     .is_write = true,
                 };
-                ot_poll_exchange(&ex);
-                ot_poll_promote(wr.data_id);
+                ot_exchange_result_t wr_r = ot_poll_exchange(&ex);
+                if (wr_r == OT_EXCHANGE_OK) {
+                    ot_poll_promote(wr.data_id);
+                    if (s_cat_ref) {
+                        s_cat_ref->ids[wr.data_id].has_raw = true;
+                        s_cat_ref->ids[wr.data_id].last_raw = wr.raw;
+                    }
+                }
+                if (s_write_cb) {
+                    s_write_cb(wr.data_id, wr.raw, wr_r, s_write_cb_ctx);
+                }
             }
         }
 

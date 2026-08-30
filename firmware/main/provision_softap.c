@@ -27,26 +27,6 @@ static bool s_active;
 static TaskHandle_t s_btn_task;
 static char s_portal_uri[32];
 
-provision_validate_result_t provision_validate(const provision_form_t *form)
-{
-    if (!form) {
-        return PROVISION_ERR_SSID;
-    }
-    if (form->wifi_ssid[0] == '\0') {
-        return PROVISION_ERR_SSID;
-    }
-    if (form->mqtt_host[0] == '\0') {
-        return PROVISION_ERR_MQTT_HOST;
-    }
-    if (form->mqtt_port == 0) {
-        return PROVISION_ERR_MQTT_PORT;
-    }
-    if (!(form->ch_min_c < form->ch_max_c)) {
-        return PROVISION_ERR_CH_BOUNDS;
-    }
-    return PROVISION_OK;
-}
-
 bool provision_is_active(void)
 {
     return s_active;
@@ -64,9 +44,13 @@ static const char *HTML_FORM =
     "MQTT username<br><input name=mqtt_user><br>"
     "MQTT password<br><input name=mqtt_pass type=password><br>"
     "MQTT TLS <input name=mqtt_tls type=checkbox value=1><br>"
+    "MQTT CA PEM (required if TLS)<br>"
+    "<textarea name=mqtt_ca rows=8 cols=40 placeholder=\"-----BEGIN CERTIFICATE-----\"></textarea><br>"
     "CH min °C<br><input name=ch_min type=number step=0.1 value=10 required><br>"
     "CH max °C<br><input name=ch_max type=number step=0.1 value=90 required><br>"
     "<button type=submit>Save</button></form></body></html>";
+
+enum { SAVE_BODY_MAX = 8192 };
 
 static void url_decode(char *s)
 {
@@ -128,53 +112,84 @@ static esp_err_t http_404_handler(httpd_req_t *req, httpd_err_code_t err)
 
 static esp_err_t save_post(httpd_req_t *req)
 {
-    char body[1024];
-    int r = httpd_req_recv(req, body, sizeof(body) - 1);
-    if (r <= 0) {
-        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "empty");
+    if (req->content_len <= 0 || req->content_len >= SAVE_BODY_MAX) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "body too large or empty");
         return ESP_FAIL;
     }
-    body[r] = '\0';
 
-    provision_form_t form;
-    memset(&form, 0, sizeof(form));
-    form_get(body, "wifi_ssid", form.wifi_ssid, sizeof(form.wifi_ssid));
-    form_get(body, "wifi_pass", form.wifi_password, sizeof(form.wifi_password));
-    form_get(body, "mqtt_host", form.mqtt_host, sizeof(form.mqtt_host));
+    char *body = malloc(SAVE_BODY_MAX);
+    if (!body) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "oom");
+        return ESP_FAIL;
+    }
+
+    int total = 0;
+    while (total < (int)req->content_len && total < SAVE_BODY_MAX - 1) {
+        int r = httpd_req_recv(req, body + total, (int)req->content_len - total);
+        if (r <= 0) {
+            free(body);
+            httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "recv failed");
+            return ESP_FAIL;
+        }
+        total += r;
+    }
+    body[total] = '\0';
+
+    /* Large form: allocate off-stack (includes mqtt_ca[4096]) */
+    provision_form_t *form = calloc(1, sizeof(*form));
+    if (!form) {
+        free(body);
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "oom");
+        return ESP_FAIL;
+    }
+
+    form_get(body, "wifi_ssid", form->wifi_ssid, sizeof(form->wifi_ssid));
+    form_get(body, "wifi_pass", form->wifi_password, sizeof(form->wifi_password));
+    form_get(body, "mqtt_host", form->mqtt_host, sizeof(form->mqtt_host));
     char tmp[32];
     form_get(body, "mqtt_port", tmp, sizeof(tmp));
-    form.mqtt_port = (uint16_t)atoi(tmp);
-    if (form.mqtt_port == 0) {
-        form.mqtt_port = 1883;
+    form->mqtt_port = (uint16_t)atoi(tmp);
+    if (form->mqtt_port == 0) {
+        form->mqtt_port = 1883;
     }
-    form_get(body, "mqtt_user", form.mqtt_username, sizeof(form.mqtt_username));
-    form_get(body, "mqtt_pass", form.mqtt_password, sizeof(form.mqtt_password));
-    form.mqtt_tls = strstr(body, "mqtt_tls=1") != NULL;
+    form_get(body, "mqtt_user", form->mqtt_username, sizeof(form->mqtt_username));
+    form_get(body, "mqtt_pass", form->mqtt_password, sizeof(form->mqtt_password));
+    form->mqtt_tls = strstr(body, "mqtt_tls=1") != NULL;
+    form_get(body, "mqtt_ca", form->mqtt_ca, sizeof(form->mqtt_ca));
     form_get(body, "ch_min", tmp, sizeof(tmp));
-    form.ch_min_c = strtof(tmp, NULL);
+    form->ch_min_c = strtof(tmp, NULL);
     form_get(body, "ch_max", tmp, sizeof(tmp));
-    form.ch_max_c = strtof(tmp, NULL);
+    form->ch_max_c = strtof(tmp, NULL);
+    free(body);
 
-    provision_validate_result_t v = provision_validate(&form);
+    provision_validate_result_t v = provision_validate(form);
     if (v != PROVISION_OK) {
+        free(form);
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "validation failed");
         return ESP_FAIL;
     }
 
     nvs_gateway_config_t cfg;
     nvs_store_get(&cfg);
-    strncpy(cfg.wifi_ssid, form.wifi_ssid, sizeof(cfg.wifi_ssid) - 1);
-    strncpy(cfg.wifi_password, form.wifi_password, sizeof(cfg.wifi_password) - 1);
-    strncpy(cfg.mqtt_host, form.mqtt_host, sizeof(cfg.mqtt_host) - 1);
-    cfg.mqtt_port = form.mqtt_port;
-    strncpy(cfg.mqtt_username, form.mqtt_username, sizeof(cfg.mqtt_username) - 1);
-    strncpy(cfg.mqtt_password, form.mqtt_password, sizeof(cfg.mqtt_password) - 1);
-    cfg.mqtt_tls = form.mqtt_tls;
-    cfg.ch_min_c = form.ch_min_c;
-    cfg.ch_max_c = form.ch_max_c;
+    strncpy(cfg.wifi_ssid, form->wifi_ssid, sizeof(cfg.wifi_ssid) - 1);
+    strncpy(cfg.wifi_password, form->wifi_password, sizeof(cfg.wifi_password) - 1);
+    strncpy(cfg.mqtt_host, form->mqtt_host, sizeof(cfg.mqtt_host) - 1);
+    cfg.mqtt_port = form->mqtt_port;
+    strncpy(cfg.mqtt_username, form->mqtt_username, sizeof(cfg.mqtt_username) - 1);
+    strncpy(cfg.mqtt_password, form->mqtt_password, sizeof(cfg.mqtt_password) - 1);
+    cfg.mqtt_tls = form->mqtt_tls;
+    cfg.ch_min_c = form->ch_min_c;
+    cfg.ch_max_c = form->ch_max_c;
     cfg.has_wifi_credentials = true;
     cfg.has_mqtt_config = true;
     nvs_store_save(&cfg);
+
+    if (form->mqtt_tls) {
+        nvs_store_mqtt_ca_save(form->mqtt_ca);
+    } else {
+        nvs_store_mqtt_ca_clear();
+    }
+    free(form);
 
     httpd_resp_sendstr(req, "Saved. Rebooting to STA...");
     ESP_LOGI(TAG, "credentials saved; reboot");

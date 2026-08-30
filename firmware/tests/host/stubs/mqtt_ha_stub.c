@@ -4,7 +4,8 @@
 #include <string.h>
 
 esp_err_t mqtt_ha_init(const char *device_id, const char *host, uint16_t port,
-                       const char *username, const char *password, bool tls)
+                       const char *username, const char *password, bool tls,
+                       const char *ca_pem)
 {
     (void)device_id;
     (void)host;
@@ -12,6 +13,7 @@ esp_err_t mqtt_ha_init(const char *device_id, const char *host, uint16_t port,
     (void)username;
     (void)password;
     (void)tls;
+    (void)ca_pem;
     return ESP_OK;
 }
 esp_err_t mqtt_ha_start(void) { return ESP_OK; }

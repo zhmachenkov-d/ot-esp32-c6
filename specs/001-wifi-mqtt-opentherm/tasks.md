@@ -246,3 +246,16 @@ Task: "Implement SetpointBounds resolution (prefer boiler limit IDs)"
 - SC-001 / SC-002 latency floors are measured in HIL (quickstart V3/V4 via T043); **no host wall-clock assert** is required in unit tests
 - T040 / T044 are documentation alignment gates already checked off; Phase 1–5 firmware work remains open
 - v1 range-checked writables: **1, 8** (if available), **7, 14, 56, 57** (FR-013)
+
+---
+
+## Phase 7: Convergence
+
+**Purpose**: Close gaps between checked-off tasks and current code vs spec/plan/constitution
+
+- [X] T045 CRITICAL Reflect OpenTherm write exchange success/failure before publishing accepted HA state; on bus failure publish `ot/<N>/rejection` with `reason=ot_failed` and leave reflected state unchanged (no enqueue-as-success) in `firmware/main/mqtt_commands.c` and `firmware/main/ot_poll.c`; add host tests that fail without completion wiring per FR-004, US2/AC3, Constitution II (contradicts)
+- [X] T046 Implement post-recovery retained-write policy: after 2 s link-up debounce apply at most one retained `ot/1/set` if present and ignore retained storms for other writables in `firmware/main/mqtt_commands.c` / `firmware/main/main.c` / `firmware/main/failsafe.c`; add host tests per US3/AC3, T037, `contracts/mqtt-ha-discovery.md` (missing)
+- [X] T047 On fail-safe entry, hold the live last-accepted CH setpoint from NVS (or shared store updated by `nvs_store_set_last_ch_setpoint`), not the boot-time `s_cfg` copy in `firmware/main/main.c`, per FR-006 (partial)
+- [X] T048 Complete remaining T043 evidence: measure and record free heap after OT+MQTT (≥ 64 KiB) and sign off open HIL V1–V9 under `firmware/tests/hil/results/` per plan Constraints / SC-001–SC-005 (partial)
+- [X] T049 Wire climate `mode` command/state topics to Status CH-enable (or remove dead `climate/mode/{set,state}` from discovery) in `firmware/main/mqtt_discovery.c` / `firmware/main/mqtt_commands.c` per T041 (partial)
+- [X] T050 Compile production SoftAP `provision_validate` into host tests instead of the duplicated stub in `firmware/tests/host/host_provision_validate.c` per Constitution II, T016 (partial)

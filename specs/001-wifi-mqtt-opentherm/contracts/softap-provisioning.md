@@ -32,18 +32,22 @@ Sustained Wi‑Fi/MQTT failure alone MUST NOT open SoftAP in v1.
 | MQTT username | no | NVS |
 | MQTT password | no | NVS |
 | MQTT TLS | no (default off) | NVS |
+| MQTT CA PEM | **yes if TLS** | NVS blob `mqtt_ca` (max 4096 bytes, NUL-terminated PEM) |
 | CH setpoint min °C | yes (seed 10.0) | NVS |
 | CH setpoint max °C | yes (seed 90.0) | NVS |
 
-**Validation**: min < max; host non-empty; reject submit with inline error otherwise. Do not proceed to STA with invalid form.
+**Validation**: min < max; host non-empty; when MQTT TLS is checked, CA PEM must be non-empty; reject submit with inline error otherwise. Do not proceed to STA with invalid form.
+
+When TLS is off, any previously stored CA PEM is cleared on save.
 
 ## Button
 
 | Signal | Board | Action |
 |--------|-------|--------|
-| Long-press ≥5 s | WeAct SW2 **GPIO9** | Clear Wi‑Fi + MQTT credentials; enter SoftAP provisioning |
+| Long-press ≥5 s | WeAct SW2 **GPIO9** | Clear Wi‑Fi + MQTT credentials **and** MQTT CA PEM; enter SoftAP provisioning |
 
 ## Security notes
 
-- Credentials stored in NVS only; never commit
+- Credentials and CA PEM stored in NVS only; never commit
+- With a provisioned CA PEM, the client verifies the broker against that trust anchor and skips certificate CN checks so LAN IPs work with self-signed Mosquitto certs
 - Portal is local to SoftAP network; v1 does not require authenticated SoftAP management beyond physical presence

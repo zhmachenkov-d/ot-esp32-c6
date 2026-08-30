@@ -19,13 +19,14 @@ Single embedded controller instance.
 | `mqtt_port` | uint16 | NVS; default 1883 |
 | `mqtt_username` / `mqtt_password` | string | NVS; optional |
 | `mqtt_tls` | bool | NVS; default false |
+| `mqtt_ca` | PEM blob | NVS; required when `mqtt_tls`; max 4096 bytes incl. NUL; cleared with credentials |
 | `ch_min_c` / `ch_max_c` | float | SoftAP fallback bounds; seeded 10.0 / 90.0 |
 | `provisioning` | bool | SoftAP active |
 | `mqtt_link` | enum | `up` \| `down` |
 | `failsafe` | bool | True when `FailSafeState.active` (entry timer expired while link still down)—**not** merely because Wi‑Fi/MQTT just dropped |
 | `last_accepted_ch_setpoint_c` | float \| null | Held across fail-safe |
 
-**Validation**: MQTT host non-empty when leaving SoftAP; `ch_min_c` < `ch_max_c`; credentials never logged in plaintext.
+**Validation**: MQTT host non-empty when leaving SoftAP; `ch_min_c` < `ch_max_c`; when `mqtt_tls`, `mqtt_ca` PEM non-empty; credentials never logged in plaintext.
 
 **Relationships**: Owns one `BoilerLink`, one `SupportedCatalog`, many `DataIdEntity` projections, one `SetpointBounds`.
 

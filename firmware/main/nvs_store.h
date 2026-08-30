@@ -16,6 +16,7 @@ extern "C" {
 #define NVS_MQTT_HOST_MAX       128
 #define NVS_MQTT_USER_MAX       64
 #define NVS_MQTT_PASS_MAX       64
+#define NVS_MQTT_CA_PEM_MAX     4096
 #define NVS_CATALOG_BLOB_MAX    512
 
 typedef struct {
@@ -53,6 +54,14 @@ esp_err_t nvs_store_set_last_ch_setpoint(float celsius);
 /** Load/save opaque catalog blob (versioned by caller). */
 esp_err_t nvs_store_catalog_save(const uint8_t *blob, size_t len);
 esp_err_t nvs_store_catalog_load(uint8_t *blob, size_t cap, size_t *out_len);
+
+/**
+ * MQTT broker CA / server PEM (NUL-terminated string stored as blob).
+ * Max NVS_MQTT_CA_PEM_MAX including trailing NUL.
+ */
+esp_err_t nvs_store_mqtt_ca_save(const char *pem);
+esp_err_t nvs_store_mqtt_ca_load(char *buf, size_t cap, size_t *out_len);
+esp_err_t nvs_store_mqtt_ca_clear(void);
 
 /** Ensure device_id from MAC if empty. */
 esp_err_t nvs_store_ensure_device_id(char *device_id, size_t cap);

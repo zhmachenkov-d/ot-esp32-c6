@@ -26,6 +26,9 @@ esp_err_t mqtt_discovery_publish_status_projections(const char *device_id,
 /** Optional additive climate for ID 1 (T041). */
 esp_err_t mqtt_discovery_publish_climate(const char *device_id, float ch_min, float ch_max);
 
+/** Publish climate mode state ("heat" / "off") from CH enable. */
+esp_err_t mqtt_discovery_publish_climate_mode(const char *device_id, bool heat_on);
+
 /** Build discovery JSON into buf (host-testable). Returns bytes written or -1. */
 int mqtt_discovery_build_device_json(char *buf, size_t cap, const char *device_id,
                                     const char *fw_version);

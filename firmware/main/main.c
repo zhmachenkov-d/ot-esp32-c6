@@ -10,6 +10,7 @@
 #include "provision_softap.h"
 
 #include "esp_event.h"
+#include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "esp_netif.h"
 #include "esp_wifi.h"
@@ -23,6 +24,7 @@
 static const char *TAG = "main";
 
 static nvs_gateway_config_t s_cfg;
+static char s_mqtt_ca[NVS_MQTT_CA_PEM_MAX];
 static ot_catalog_t s_catalog;
 static failsafe_state_t s_failsafe;
 static EventGroupHandle_t s_wifi_events;
@@ -75,17 +77,19 @@ static void failsafe_task(void *arg)
         failsafe_on_link(&s_failsafe, s_wifi_up && s_got_ip, mqtt_up, now);
         bool active = failsafe_is_active(&s_failsafe);
         if (active && !was_active) {
-            /* Option A: present offline when active */
+            /* Option A: present offline when active — hold live NVS last CH (T047) */
             mqtt_ha_publish_offline();
-            if (s_cfg.has_last_accepted_ch) {
-                ot_poll_set_hold_ch_setpoint(true, s_cfg.last_accepted_ch_setpoint_c);
-                failsafe_set_held_ch(&s_failsafe, s_cfg.last_accepted_ch_setpoint_c);
+            nvs_gateway_config_t live;
+            if (nvs_store_get(&live) == ESP_OK && live.has_last_accepted_ch) {
+                ot_poll_set_hold_ch_setpoint(true, live.last_accepted_ch_setpoint_c);
+                failsafe_set_held_ch(&s_failsafe, live.last_accepted_ch_setpoint_c);
             }
             ESP_LOGW(TAG, "fail-safe ACTIVE");
         } else if (!active && was_active) {
             ot_poll_set_hold_ch_setpoint(false, 0);
             mqtt_ha_publish_birth_online();
             mqtt_discovery_publish_all(s_cfg.device_id, &s_catalog, s_cfg.ch_min_c, s_cfg.ch_max_c);
+            mqtt_commands_begin_post_recovery();
             mqtt_commands_start_subscriptions();
             ESP_LOGI(TAG, "fail-safe cleared");
         } else if (!active && failsafe_app_availability_online(&s_failsafe) &&
@@ -125,6 +129,8 @@ static void state_publish_task(void *arg)
                                                       ot_poll_get_master_status_flags(),
                                                       ot_poll_get_slave_status_flags(),
                                                       s_catalog.ids[0].writable);
+            mqtt_discovery_publish_climate_mode(s_cfg.device_id,
+                                                (ot_poll_get_master_status_flags() & 0x01) != 0);
         }
     }
 }
@@ -155,8 +161,21 @@ void app_main(void)
         ESP_LOGW(TAG, "STA join failed — staying up for retry/button");
     }
 
+    const char *ca_pem = NULL;
+    if (s_cfg.mqtt_tls) {
+        size_t ca_len = 0;
+        esp_err_t ca_err = nvs_store_mqtt_ca_load(s_mqtt_ca, sizeof(s_mqtt_ca), &ca_len);
+        if (ca_err != ESP_OK || s_mqtt_ca[0] == '\0') {
+            ESP_LOGE(TAG, "MQTT TLS enabled but CA PEM missing — re-provision");
+            ESP_ERROR_CHECK(provision_softap_start(s_cfg.device_id));
+            return;
+        }
+        ca_pem = s_mqtt_ca;
+    }
+
     ESP_ERROR_CHECK(mqtt_ha_init(s_cfg.device_id, s_cfg.mqtt_host, s_cfg.mqtt_port,
-                                 s_cfg.mqtt_username, s_cfg.mqtt_password, s_cfg.mqtt_tls));
+                                 s_cfg.mqtt_username, s_cfg.mqtt_password, s_cfg.mqtt_tls,
+                                 ca_pem));
     ESP_ERROR_CHECK(mqtt_ha_start());
 
     /* Catalog: load cache then discover/validate */
@@ -177,6 +196,8 @@ void app_main(void)
         mqtt_discovery_publish_all(s_cfg.device_id, &s_catalog, s_cfg.ch_min_c, s_cfg.ch_max_c);
         mqtt_discovery_publish_climate(s_cfg.device_id, s_cfg.ch_min_c, s_cfg.ch_max_c);
         mqtt_commands_start_subscriptions();
+        size_t free_heap = heap_caps_get_free_size(MALLOC_CAP_DEFAULT);
+        ESP_LOGI(TAG, "free heap after OT+MQTT: %u bytes (budget >= 65536)", (unsigned)free_heap);
     }
 
     xTaskCreate(failsafe_task, "failsafe", 3072, NULL, 4, NULL);

@@ -1,8 +1,8 @@
 #include "mqtt_ha.h"
 
 #include "app_config.h"
+#include "nvs_store.h"
 
-#include "esp_crt_bundle.h"
 #include "esp_log.h"
 #include "mqtt_client.h"
 
@@ -15,6 +15,7 @@ static const char *TAG = "mqtt_ha";
 static esp_mqtt_client_handle_t s_client;
 static char s_device_id[16];
 static char s_status_topic[64];
+static char s_ca_pem[NVS_MQTT_CA_PEM_MAX];
 static bool s_connected;
 static bool s_force_offline_birth;
 static mqtt_ha_message_cb_t s_msg_cb;
@@ -54,7 +55,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
             if (payload) {
                 memcpy(payload, event->data, event->data_len);
                 payload[event->data_len] = '\0';
-                s_msg_cb(topic, payload, event->data_len, s_msg_ctx);
+                s_msg_cb(topic, payload, event->data_len, event->retain != 0, s_msg_ctx);
                 free(payload);
             }
         }
@@ -67,9 +68,12 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 esp_err_t mqtt_ha_init(const char *device_id,
                        const char *host, uint16_t port,
                        const char *username, const char *password,
-                       bool tls)
+                       bool tls, const char *ca_pem)
 {
     if (!device_id || !host || !host[0]) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (tls && (!ca_pem || !ca_pem[0])) {
         return ESP_ERR_INVALID_ARG;
     }
     strncpy(s_device_id, device_id, sizeof(s_device_id) - 1);
@@ -91,8 +95,15 @@ esp_err_t mqtt_ha_init(const char *device_id,
         },
     };
     if (tls) {
-        /* Required by esp-tls when using mqtts:// — verify broker with system CA bundle */
-        cfg.broker.verification.crt_bundle_attach = esp_crt_bundle_attach;
+        size_t pem_len = strlen(ca_pem);
+        if (pem_len + 1 > sizeof(s_ca_pem)) {
+            return ESP_ERR_INVALID_ARG;
+        }
+        memcpy(s_ca_pem, ca_pem, pem_len + 1);
+        /* Pin broker CA/server PEM; skip CN so LAN IPs work with self-signed certs */
+        cfg.broker.verification.certificate = s_ca_pem;
+        cfg.broker.verification.certificate_len = pem_len + 1;
+        cfg.broker.verification.skip_cert_common_name_check = true;
     }
 
     s_client = esp_mqtt_client_init(&cfg);
@@ -100,7 +111,7 @@ esp_err_t mqtt_ha_init(const char *device_id,
         return ESP_ERR_NO_MEM;
     }
     esp_mqtt_client_register_event(s_client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
-    ESP_LOGI(TAG, "init uri=%s lwt=%s", uri, s_status_topic);
+    ESP_LOGI(TAG, "init uri=%s lwt=%s tls=%d", uri, s_status_topic, (int)tls);
     return ESP_OK;
 }
 

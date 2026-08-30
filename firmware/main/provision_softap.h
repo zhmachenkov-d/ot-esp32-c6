@@ -3,6 +3,7 @@
 #include <stdbool.h>
 
 #include "esp_err.h"
+#include "nvs_store.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -16,6 +17,7 @@ typedef struct {
     char mqtt_username[64];
     char mqtt_password[64];
     bool mqtt_tls;
+    char mqtt_ca[NVS_MQTT_CA_PEM_MAX];
     float ch_min_c;
     float ch_max_c;
 } provision_form_t;
@@ -25,6 +27,7 @@ typedef enum {
     PROVISION_ERR_SSID,
     PROVISION_ERR_MQTT_HOST,
     PROVISION_ERR_MQTT_PORT,
+    PROVISION_ERR_MQTT_CA,
     PROVISION_ERR_CH_BOUNDS,
 } provision_validate_result_t;
 

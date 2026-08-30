@@ -28,12 +28,12 @@ add_library(otc6_host STATIC
   ${MAIN_DIR}/ot_codec.c
   ${MAIN_DIR}/failsafe.c
   ${MAIN_DIR}/ot_catalog.c
+  ${MAIN_DIR}/provision_validate.c
   ${CMAKE_CURRENT_SOURCE_DIR}/host_catalog_nvs_stub.c
   ${CMAKE_CURRENT_SOURCE_DIR}/host_ot_poll_stub.c
   ${CMAKE_CURRENT_SOURCE_DIR}/stubs/mqtt_ha_stub.c
   ${CMAKE_CURRENT_SOURCE_DIR}/host_discovery_builders.c
   ${CMAKE_CURRENT_SOURCE_DIR}/host_commands_core.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/host_provision_validate.c
 )
 
 target_link_libraries(otc6_host PUBLIC m)

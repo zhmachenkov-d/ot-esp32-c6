@@ -10,12 +10,13 @@
 extern "C" {
 #endif
 
-typedef void (*mqtt_ha_message_cb_t)(const char *topic, const char *payload, int len, void *ctx);
+typedef void (*mqtt_ha_message_cb_t)(const char *topic, const char *payload, int len,
+                                     bool retain, void *ctx);
 
 esp_err_t mqtt_ha_init(const char *device_id,
                        const char *host, uint16_t port,
                        const char *username, const char *password,
-                       bool tls);
+                       bool tls, const char *ca_pem);
 
 esp_err_t mqtt_ha_start(void);
 void mqtt_ha_stop(void);

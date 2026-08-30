@@ -43,6 +43,15 @@ esp_err_t ot_poll_start(void);
 bool ot_poll_enqueue_write(uint8_t data_id, uint16_t raw_value);
 
 /**
+ * Called after a queued WRITE-DATA exchange completes (success or bus failure).
+ * Enqueue alone MUST NOT be treated as accepted HA state.
+ */
+typedef void (*ot_write_complete_cb_t)(uint8_t data_id, uint16_t raw,
+                                       ot_exchange_result_t result, void *ctx);
+
+void ot_poll_set_write_complete_cb(ot_write_complete_cb_t cb, void *ctx);
+
+/**
  * ID 0 special: update pending master Status flags applied on next READ-DATA(id=0).
  * Never uses WRITE-DATA(id=0).
  */

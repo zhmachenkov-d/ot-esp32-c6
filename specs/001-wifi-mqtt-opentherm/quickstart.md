@@ -23,6 +23,17 @@ End-to-end checks that prove the feature works. Implementation lives under plann
 2. On first boot, join **open** SoftAP `OTC6-XXXX`, open captive portal, submit Wi‑Fi + MQTT + CH min/max (defaults 10 / 90 °C).
 3. Confirm device leaves SoftAP, joins STA, MQTT status `online`.
 
+### MQTT TLS (private CA / self-signed)
+
+Firmware verifies `mqtts` against a **provisioned CA or server PEM**, not the public CA bundle. Use this for Home Assistant Mosquitto with a self-signed cert:
+
+1. Export the broker certificate (leaf is fine if self-signed), e.g. from a LAN host:
+   - `openssl s_client -connect <broker-ip>:8883 -showcerts </dev/null 2>/dev/null | openssl x509 -outform PEM`
+   - or copy the Mosquitto add-on `certfile` / CA PEM from the HA host
+2. SoftAP portal: check **MQTT TLS**, set port **8883** (or your TLS port), paste the PEM into **MQTT CA PEM**, save.
+3. Re-provision (GPIO9 ≥5 s) if TLS was enabled earlier without a CA — serial will show `-0x2700` / `Failed to verify peer certificate!` until the PEM is stored.
+4. Expect `mqtt_ha: connected` on the monitor.
+
 ## Validation scenarios
 
 ### V1 — Commissioning (SC-005, FR-005)

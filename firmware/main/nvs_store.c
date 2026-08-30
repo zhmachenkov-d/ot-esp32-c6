@@ -170,7 +170,78 @@ esp_err_t nvs_store_clear_credentials(void)
     c.mqtt_port = 1883;
     c.has_wifi_credentials = false;
     c.has_mqtt_config = false;
-    return nvs_store_save(&c);
+    esp_err_t err = nvs_store_save(&c);
+    if (err != ESP_OK) {
+        return err;
+    }
+    return nvs_store_mqtt_ca_clear();
+}
+
+esp_err_t nvs_store_mqtt_ca_save(const char *pem)
+{
+    if (!pem || !pem[0]) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    size_t len = strlen(pem) + 1; /* include NUL for PEM consumers */
+    if (len > NVS_MQTT_CA_PEM_MAX) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    nvs_handle_t h;
+    esp_err_t err = nvs_open(NS, NVS_READWRITE, &h);
+    if (err != ESP_OK) {
+        return err;
+    }
+    err = nvs_set_blob(h, "mqtt_ca", pem, len);
+    if (err == ESP_OK) {
+        err = nvs_commit(h);
+    }
+    nvs_close(h);
+    return err;
+}
+
+esp_err_t nvs_store_mqtt_ca_load(char *buf, size_t cap, size_t *out_len)
+{
+    if (!buf || cap == 0 || !out_len) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    nvs_handle_t h;
+    esp_err_t err = nvs_open(NS, NVS_READONLY, &h);
+    if (err != ESP_OK) {
+        return err;
+    }
+    size_t len = cap;
+    err = nvs_get_blob(h, "mqtt_ca", buf, &len);
+    nvs_close(h);
+    if (err == ESP_OK) {
+        if (len == 0 || buf[len - 1] != '\0') {
+            /* Ensure C string even if older blob lacked NUL */
+            if (len >= cap) {
+                return ESP_ERR_INVALID_SIZE;
+            }
+            buf[len] = '\0';
+            len++;
+        }
+        *out_len = len;
+    }
+    return err;
+}
+
+esp_err_t nvs_store_mqtt_ca_clear(void)
+{
+    nvs_handle_t h;
+    esp_err_t err = nvs_open(NS, NVS_READWRITE, &h);
+    if (err != ESP_OK) {
+        return err;
+    }
+    err = nvs_erase_key(h, "mqtt_ca");
+    if (err == ESP_ERR_NVS_NOT_FOUND) {
+        err = ESP_OK;
+    }
+    if (err == ESP_OK) {
+        err = nvs_commit(h);
+    }
+    nvs_close(h);
+    return err;
 }
 
 esp_err_t nvs_store_set_last_ch_setpoint(float celsius)
