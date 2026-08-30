@@ -36,8 +36,9 @@ Missing or corrupt MQTT CA while TLS is enabled MUST NOT open SoftAP; recover vi
 | MQTT CA PEM | **yes if TLS** | NVS blob `mqtt_ca` (max 4096 bytes, NUL-terminated PEM) |
 | CH setpoint min °C | yes (seed 10.0) | NVS |
 | CH setpoint max °C | yes (seed 90.0) | NVS |
+| Setup PIN | yes (from USB serial at SoftAP start; one-time) | not persisted |
 
-**Validation**: min < max; host non-empty; when MQTT TLS is checked, CA PEM must be non-empty; reject submit with inline error otherwise. Do not proceed to STA with invalid form.
+**Validation**: min < max; host non-empty; when MQTT TLS is checked, CA PEM must be non-empty; **Setup PIN must match the current SoftAP session token** (logged on serial; not served in HTML); reject submit with inline error otherwise. Do not proceed to STA with invalid form. A valid PIN is consumed on successful save so a concurrent SoftAP client cannot reuse it.
 
 When TLS is off, any previously stored CA PEM is cleared on save.
 
@@ -52,5 +53,6 @@ When TLS is off, any previously stored CA PEM is cleared on save.
 - Credentials and CA PEM stored in NVS only; never commit
 - SoftAP uses WPA2-PSK so concurrent RF neighbors without the device PSK cannot join or sniff cleartext HTTP `POST /save`
 - SoftAP PSK is device-local (NVS); obtain it from serial log at SoftAP start, or a factory label/QR that mirrors the same value
+- `POST /save` requires a **one-time Setup PIN** logged on USB serial at SoftAP start (distinct from the SoftAP PSK). The PIN is not embedded in the portal HTML; missing/invalid PIN → 403; successful save consumes the PIN for that SoftAP session
 - With a provisioned CA PEM, the client verifies the broker against that trust anchor and skips certificate CN checks so LAN IPs work with self-signed Mosquitto certs
-- Portal remains HTTP on the SoftAP network; association control is the SoftAP PSK (not portal login)
+- Portal remains HTTP on the SoftAP network; association uses SoftAP PSK; save authorization uses the serial Setup PIN

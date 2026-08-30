@@ -9,6 +9,7 @@
 #include "esp_log.h"
 #include "esp_mac.h"
 #include "esp_netif.h"
+#include "esp_random.h"
 #include "esp_wifi.h"
 #include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
@@ -26,6 +27,7 @@ static dns_server_handle_t s_dns;
 static bool s_active;
 static TaskHandle_t s_btn_task;
 static char s_portal_uri[32];
+static provision_save_auth_t s_save_auth;
 
 bool provision_is_active(void)
 {
@@ -48,6 +50,7 @@ static const char *HTML_FORM =
     "<textarea name=mqtt_ca rows=8 cols=40 placeholder=\"-----BEGIN CERTIFICATE-----\"></textarea><br>"
     "CH min °C<br><input name=ch_min type=number step=0.1 value=10 required><br>"
     "CH max °C<br><input name=ch_max type=number step=0.1 value=90 required><br>"
+    "Setup PIN (from USB serial)<br><input name=setup_pin required autocomplete=off><br>"
     "<button type=submit>Save</button></form></body></html>";
 
 enum { SAVE_BODY_MAX = 8192 };
@@ -135,6 +138,15 @@ static esp_err_t save_post(httpd_req_t *req)
     }
     body[total] = '\0';
 
+    char setup_pin[PROVISION_SAVE_TOKEN_MAX];
+    form_get(body, "setup_pin", setup_pin, sizeof(setup_pin));
+    if (!provision_save_auth_matches(&s_save_auth, setup_pin)) {
+        free(body);
+        httpd_resp_set_status(req, "403 Forbidden");
+        httpd_resp_send(req, "invalid or missing setup PIN", HTTPD_RESP_USE_STRLEN);
+        return ESP_FAIL;
+    }
+
     /* Large form: allocate off-stack (includes mqtt_ca[4096]) */
     provision_form_t *form = calloc(1, sizeof(*form));
     if (!form) {
@@ -166,6 +178,14 @@ static esp_err_t save_post(httpd_req_t *req)
     if (v != PROVISION_OK) {
         free(form);
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "validation failed");
+        return ESP_FAIL;
+    }
+
+    /* Consume only after form validates so a bad submit does not burn the PIN. */
+    if (!provision_save_auth_consume(&s_save_auth, setup_pin)) {
+        free(form);
+        httpd_resp_set_status(req, "403 Forbidden");
+        httpd_resp_send(req, "invalid or missing setup PIN", HTTPD_RESP_USE_STRLEN);
         return ESP_FAIL;
     }
 
@@ -323,6 +343,19 @@ esp_err_t provision_softap_start(const char *device_id)
     }
 
     dhcp_set_captive_portal_uri();
+
+    /* One-time setup PIN: serial only (not in HTML) so SoftAP clients cannot silent-save. */
+    char save_token[PROVISION_SAVE_TOKEN_MAX];
+    uint8_t rnd[4];
+    esp_fill_random(rnd, sizeof(rnd));
+    for (size_t i = 0; i < sizeof(rnd); i++) {
+        snprintf(save_token + (i * 2), 3, "%02x", rnd[i]);
+    }
+    if (!provision_save_auth_set(&s_save_auth, save_token)) {
+        ESP_LOGE(TAG, "setup PIN init failed");
+        return ESP_ERR_INVALID_STATE;
+    }
+
     start_httpd();
 
     /* Contract: DNS catch-all → SoftAP IP so phones open the portal */
@@ -333,11 +366,12 @@ esp_err_t provision_softap_start(const char *device_id)
     }
 
     s_active = true;
-    /* SoftAP PSK is logged for serial commissioning (label/QR may mirror this). */
+    /* SoftAP PSK + setup PIN logged for serial commissioning. */
     ESP_LOGI(TAG,
              "SoftAP %s WPA2-PSK password=%s — join then open %s/ if portal does not pop up",
              ap_params.ssid, ap_params.password,
              s_portal_uri[0] ? s_portal_uri : "http://192.168.4.1");
+    ESP_LOGI(TAG, "Setup PIN (required on Save, one-time)=%s", save_token);
     return ESP_OK;
 }
 

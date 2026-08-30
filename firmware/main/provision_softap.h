@@ -78,6 +78,26 @@ typedef struct {
 void provision_softap_plan_wifi(bool wifi_already_init, bool wifi_started,
                                 provision_softap_wifi_plan_t *out);
 
+/** One-time SoftAP portal save token (serial-displayed; not embedded in HTML). */
+enum { PROVISION_SAVE_TOKEN_MAX = 9 }; /* 8 hex chars + NUL */
+
+typedef struct {
+    char token[PROVISION_SAVE_TOKEN_MAX];
+    bool consumed;
+} provision_save_auth_t;
+
+/** Set expected token and clear consumed. Rejects NULL/empty/too-long token. */
+bool provision_save_auth_set(provision_save_auth_t *auth, const char *token);
+
+/** True if auth is unused and submitted equals the expected token (no consume). */
+bool provision_save_auth_matches(const provision_save_auth_t *auth, const char *submitted);
+
+/**
+ * Accept submitted setup PIN once (host-testable). Rejects missing/invalid/consumed.
+ * On success marks auth consumed and returns true.
+ */
+bool provision_save_auth_consume(provision_save_auth_t *auth, const char *submitted);
+
 esp_err_t provision_softap_start(const char *device_id);
 void provision_softap_stop(void);
 

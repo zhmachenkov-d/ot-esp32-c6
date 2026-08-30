@@ -69,3 +69,49 @@ void provision_softap_plan_wifi(bool wifi_already_init, bool wifi_started,
     /* Stop whenever the driver is up so set_mode(AP) is not racing STA. */
     out->call_wifi_stop = wifi_started;
 }
+
+bool provision_save_auth_set(provision_save_auth_t *auth, const char *token)
+{
+    if (!auth || !token || token[0] == '\0') {
+        return false;
+    }
+    size_t n = strlen(token);
+    if (n >= PROVISION_SAVE_TOKEN_MAX) {
+        return false;
+    }
+    memset(auth, 0, sizeof(*auth));
+    memcpy(auth->token, token, n);
+    auth->consumed = false;
+    return true;
+}
+
+static unsigned provision_save_token_diff(const char *expect, const char *got)
+{
+    size_t expect_len = strlen(expect);
+    size_t got_len = strlen(got);
+    unsigned diff = (unsigned)(expect_len ^ got_len);
+    size_t n = expect_len > got_len ? expect_len : got_len;
+    for (size_t i = 0; i < n; i++) {
+        unsigned char a = (i < expect_len) ? (unsigned char)expect[i] : 0;
+        unsigned char b = (i < got_len) ? (unsigned char)got[i] : 0;
+        diff |= (unsigned)(a ^ b);
+    }
+    return diff;
+}
+
+bool provision_save_auth_matches(const provision_save_auth_t *auth, const char *submitted)
+{
+    if (!auth || !submitted || auth->token[0] == '\0' || auth->consumed) {
+        return false;
+    }
+    return provision_save_token_diff(auth->token, submitted) == 0;
+}
+
+bool provision_save_auth_consume(provision_save_auth_t *auth, const char *submitted)
+{
+    if (!provision_save_auth_matches(auth, submitted)) {
+        return false;
+    }
+    auth->consumed = true;
+    return true;
+}

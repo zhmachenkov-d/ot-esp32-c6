@@ -145,6 +145,28 @@ void test_softap_wifi_plan_virgin_calls_init(void)
     TEST_ASSERT_FALSE(plan.call_wifi_stop);
 }
 
+void test_save_auth_rejects_missing_or_invalid_token(void)
+{
+    provision_save_auth_t auth;
+    TEST_ASSERT_TRUE(provision_save_auth_set(&auth, "a1b2c3d4"));
+    TEST_ASSERT_FALSE(provision_save_auth_consume(&auth, NULL));
+    TEST_ASSERT_FALSE(provision_save_auth_consume(&auth, ""));
+    TEST_ASSERT_FALSE(provision_save_auth_consume(&auth, "deadbeef"));
+    TEST_ASSERT_FALSE(provision_save_auth_matches(&auth, "a1b2c3d4x"));
+    TEST_ASSERT_FALSE(auth.consumed);
+}
+
+void test_save_auth_accepts_valid_token_once(void)
+{
+    provision_save_auth_t auth;
+    TEST_ASSERT_TRUE(provision_save_auth_set(&auth, "a1b2c3d4"));
+    TEST_ASSERT_TRUE(provision_save_auth_matches(&auth, "a1b2c3d4"));
+    TEST_ASSERT_TRUE(provision_save_auth_consume(&auth, "a1b2c3d4"));
+    TEST_ASSERT_TRUE(auth.consumed);
+    TEST_ASSERT_FALSE(provision_save_auth_matches(&auth, "a1b2c3d4"));
+    TEST_ASSERT_FALSE(provision_save_auth_consume(&auth, "a1b2c3d4"));
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -162,5 +184,7 @@ int main(void)
     RUN_TEST(test_softap_ap_params_reject_short_or_missing_psk);
     RUN_TEST(test_softap_wifi_plan_after_sta_skips_second_init);
     RUN_TEST(test_softap_wifi_plan_virgin_calls_init);
+    RUN_TEST(test_save_auth_rejects_missing_or_invalid_token);
+    RUN_TEST(test_save_auth_accepts_valid_token_once);
     return UNITY_END();
 }
