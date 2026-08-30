@@ -30,7 +30,11 @@ struct ot_catalog;
 /** Init OpenTherm master on APP_OT_GPIO_IN/OUT (sazanof or Melnyk-port). */
 esp_err_t ot_poll_init(void);
 
-/** Single blocking exchange (read or write). Caller enforces inter-frame gap. */
+/**
+ * Single blocking exchange (read or write). Serialized by an internal bus mutex
+ * so discovery, the poll task, and other callers cannot interleave frames.
+ * Inter-frame gap is applied before releasing the mutex.
+ */
 ot_exchange_result_t ot_poll_exchange(ot_exchange_t *ex);
 
 /** Optional catalog pointer for tiered reads (nullable until discovery). */

@@ -54,3 +54,15 @@ add_host_test(test_provision_validate test_provision_validate.c)
 add_host_test(test_setpoint_bounds test_setpoint_bounds.c)
 add_host_test(test_mqtt_commands test_mqtt_commands.c)
 add_host_test(test_failsafe test_failsafe.c)
+
+# Links real ot_poll.c (bus mutex) with host FreeRTOS/OpenTherm stubs — not the poll stub.
+add_executable(test_ot_poll_bus_lock
+  test_ot_poll_bus_lock.c
+  ${MAIN_DIR}/ot_poll.c
+  ${MAIN_DIR}/ot_codec.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/stubs/mqtt_ha_stub.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/stubs/freertos_host_stub.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/stubs/opentherm_host_stub.c
+)
+target_link_libraries(test_ot_poll_bus_lock unity m pthread)
+add_test(NAME test_ot_poll_bus_lock COMMAND test_ot_poll_bus_lock)

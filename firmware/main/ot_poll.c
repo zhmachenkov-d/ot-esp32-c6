@@ -9,6 +9,7 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
+#include "freertos/semphr.h"
 #include "freertos/task.h"
 #include "opentherm.h"
 
@@ -22,6 +23,7 @@ typedef struct {
 } write_req_t;
 
 static QueueHandle_t s_write_q;
+static SemaphoreHandle_t s_bus_mtx;
 static TaskHandle_t s_task;
 static uint8_t s_master_hb;
 static uint8_t s_slave_lb;
@@ -78,7 +80,11 @@ static ot_exchange_result_t map_status(open_therm_response_status_t st, open_the
 
 static void gap_ms(unsigned ms)
 {
+#if HOST_TEST
+    (void)ms;
+#else
     vTaskDelay(pdMS_TO_TICKS(ms));
+#endif
 }
 
 esp_err_t ot_poll_init(void)
@@ -97,6 +103,12 @@ esp_err_t ot_poll_init(void)
     if (!s_write_q) {
         return ESP_ERR_NO_MEM;
     }
+    s_bus_mtx = xSemaphoreCreateMutex();
+    if (!s_bus_mtx) {
+        vQueueDelete(s_write_q);
+        s_write_q = NULL;
+        return ESP_ERR_NO_MEM;
+    }
     s_master_hb = 0;
     s_inited = true;
     ESP_LOGI(TAG, "OT master init GPIO in=%d out=%d (sazanof)", APP_OT_GPIO_IN, APP_OT_GPIO_OUT);
@@ -105,7 +117,10 @@ esp_err_t ot_poll_init(void)
 
 ot_exchange_result_t ot_poll_exchange(ot_exchange_t *ex)
 {
-    if (!ex || !s_inited) {
+    if (!ex || !s_inited || !s_bus_mtx) {
+        return OT_EXCHANGE_ERROR;
+    }
+    if (xSemaphoreTake(s_bus_mtx, portMAX_DELAY) != pdTRUE) {
         return OT_EXCHANGE_ERROR;
     }
     open_therm_message_type_t mtype = ex->is_write ? OT_WRITE_DATA : OT_READ_DATA;
@@ -117,6 +132,7 @@ ot_exchange_result_t ot_poll_exchange(ot_exchange_t *ex)
     ot_exchange_result_t r = map_status(st, rtype);
     ex->result = r;
     gap_ms(APP_OT_INTER_FRAME_GAP_MS);
+    xSemaphoreGive(s_bus_mtx);
     return r;
 }
 
