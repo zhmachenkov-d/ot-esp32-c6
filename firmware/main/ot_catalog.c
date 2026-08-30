@@ -6,6 +6,10 @@
 
 #include <string.h>
 
+/* Compact blob: version u32 + validated u8 + 4 bytes × OT_CATALOG_MAX_IDS */
+_Static_assert(5 + OT_CATALOG_MAX_IDS * 4 <= NVS_CATALOG_BLOB_MAX,
+               "NVS_CATALOG_BLOB_MAX too small for catalog blob");
+
 /* v1 known write-safe set: 0, 1 + fixtures may extend via write_safe_fixture flag */
 static bool id_is_directory_writable_default(uint8_t id)
 {

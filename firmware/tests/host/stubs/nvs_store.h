@@ -12,7 +12,7 @@
 #define NVS_MQTT_USER_MAX       64
 #define NVS_MQTT_PASS_MAX       64
 #define NVS_MQTT_CA_PEM_MAX     4096
-#define NVS_CATALOG_BLOB_MAX    512
+#define NVS_CATALOG_BLOB_MAX    520
 
 esp_err_t nvs_store_catalog_save(const uint8_t *blob, size_t len);
 esp_err_t nvs_store_catalog_load(uint8_t *blob, size_t cap, size_t *out_len);

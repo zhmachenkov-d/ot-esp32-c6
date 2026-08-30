@@ -17,7 +17,7 @@ extern "C" {
 #define NVS_MQTT_USER_MAX       64
 #define NVS_MQTT_PASS_MAX       64
 #define NVS_MQTT_CA_PEM_MAX     4096
-#define NVS_CATALOG_BLOB_MAX    512
+#define NVS_CATALOG_BLOB_MAX    520
 
 typedef struct {
     char device_id[NVS_DEVICE_ID_MAX];
