@@ -34,7 +34,7 @@ description: "Task list for OpenTherm Wi‑Fi MQTT Gateway implementation"
 - [ ] T001 Create ESP-IDF project skeleton under `firmware/` (`CMakeLists.txt`, `sdkconfig.defaults`, `main/CMakeLists.txt`, empty `main/main.c`) per plan.md
 - [ ] T002 [P] Add IDF Component Manager deps in `firmware/idf_component.yml` for `sazanof/opentherm` (^1.0.3+) and `espressif/mqtt`
 - [ ] T003 [P] Create compile-time defaults in `firmware/main/app_config.h` (GPIO in=2 / out=3, SoftAP button GPIO9 ≥5 s, CH min/max 10.0/90.0, boiler-link failure threshold 3, topic root `otc6/`)
-- [ ] T004 [P] Scaffold host test harness under `firmware/tests/host/` (CMake/`idf.py` host-test entry so Unity/CMocka suites can run)
+- [ ] T004 [P] Scaffold host test harness under `firmware/tests/host/` (CMake/`idf.py` host-test entry for **Unity** suites)
 - [ ] T005 [P] Add HIL scenario stubs in `firmware/tests/hil/` that mirror quickstart.md V1–V9 checklists
 
 **Checkpoint**: `idf.py set-target esp32c6` and empty app build succeed; host harness is invokable
@@ -98,7 +98,7 @@ description: "Task list for OpenTherm Wi‑Fi MQTT Gateway implementation"
 ### Tests for User Story 2
 
 - [ ] T025 [P] [US2] Add host tests for SetpointBounds resolution and ID 1 reject-not-clamp in `firmware/tests/host/test_setpoint_bounds.c`
-- [ ] T026 [P] [US2] Add host tests for WritableCommand outcomes (`accepted`, `rejected_range`, `rejected_failsafe`, `rejected_link`, `ot_failed`) in `firmware/tests/host/test_mqtt_commands.c`
+- [ ] T026 [P] [US2] Add host tests for WritableCommand outcomes (`accepted`, `rejected_range`, `rejected_failsafe`, `ot_failed`) including **boiler-link unhealthy still attempts write** (success→`accepted` / fail→`ot_failed`, never a link pre-reject) in `firmware/tests/host/test_mqtt_commands.c`
 
 ### Implementation for User Story 2
 
@@ -143,7 +143,7 @@ description: "Task list for OpenTherm Wi‑Fi MQTT Gateway implementation"
 - [x] T040 [P] Verify `specs/001-wifi-mqtt-opentherm/contracts/opentherm-master.md` GPIO table matches WeAct Mini defaults (in=2 / out=3); amend only if drift reappears
 - [ ] T041 [P] Optional additive HA `climate` convenience for ID 1 / related status in `firmware/main/mqtt_discovery.c` without removing per-ID entities (FR-002)
 - [ ] T042 [P] Add brief `firmware/README.md` with build/flash and pointer to `specs/001-wifi-mqtt-opentherm/quickstart.md`
-- [ ] T043 Run full quickstart.md host + HIL validation pass (V1–V9 including V8); record results under `firmware/tests/hil/results/` (or checklist sign-off); include `idf.py size` (or equivalent) flash/RAM headroom note for ESP32-C6FH4
+- [ ] T043 Run full quickstart.md host + HIL validation pass (V1–V9 including V8); record results under `firmware/tests/hil/results/` (or checklist sign-off); include `idf.py size` (or equivalent) and confirm soft budgets: app `.bin` ≤ 1.5 MiB, free heap after OT+MQTT ≥ 64 KiB (plan Constraints)
 - [x] T044 [P] Confirm constitution v2.0.0 Wi‑Fi MQTT wording matches this feature (Zigbee/Thread remain out of scope); no further constitution edit required unless drift returns
 
 ---

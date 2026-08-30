@@ -45,12 +45,14 @@ Boiler-link health MUST NOT reuse this topic as its only signal.
 
 ## Per Data ID entities
 
+Default component choice follows the **Default HA component map** in `data-model.md` (encoding class → HA type). Summary:
+
 For each **available** readable ID `N`:
 
 | HA type | When |
 |---------|------|
-| `sensor` | Continuous / enumerated non-boolean |
-| `binary_sensor` | Flag / boolean readable |
+| `sensor` | Continuous numeric **or** whole-ID flag8/bitfield raw |
+| `binary_sensor` | Additive only for documented flag projections (e.g. Status bits)—not a substitute for omitting the per-ID entity |
 
 - Discovery: `homeassistant/<component>/otc6_<device_id>_ot_<N>/config`
 - `unique_id`: `otc6_<device_id>_ot_<N>`
@@ -62,8 +64,8 @@ For each **available writable** ID `N`:
 
 | HA type | When |
 |---------|------|
-| `number` | Numeric writable |
-| `switch` | Boolean / enable writable |
+| `number` | Continuous numeric writable, or raw flag8 write |
+| `switch` | Documented boolean / single-bit enable writable |
 
 - `command_topic`: `otc6/<device_id>/ot/<N>/set`
 - `state_topic`: `otc6/<device_id>/ot/<N>/state` (reflected accepted value)
@@ -101,10 +103,11 @@ Optional: also discover `event` or diagnostic `binary_sensor` that toggles/pulse
 
 | Condition | Broker / HA observation |
 |-----------|-------------------------|
-| In-range writable, link OK | OT write attempted; state updates ≤2 s (SC-002) |
-| ID 1 out of range | No OT write; state unchanged; rejection payload published |
-| Fail-safe active | No remote writes applied; state unchanged / unavailable — not false success |
-| Boiler OT failure | No false success; boiler-link may go unhealthy after threshold |
+| In-range writable, fail-safe inactive | OT write **attempted**; state updates ≤2 s on success (SC-002) |
+| ID 1 out of range | No OT write; state unchanged; rejection payload published (`rejected_range`) |
+| Fail-safe active | No remote writes applied (`rejected_failsafe`); state unchanged / unavailable — not false success |
+| Boiler-link unhealthy | **Still attempt** OT write; on failure → no false success (`ot_failed`); boiler-link may stay/become unhealthy per threshold |
+| OT exchange failure (any link state) | No false success; reflected state unchanged; outcome `ot_failed` |
 
 ---
 

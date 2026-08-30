@@ -62,12 +62,14 @@ All Technical Context unknowns and integration choices resolved below. Sources: 
 |------|--------------|----------|
 | Gateway online | LWT + `availability_topic` on all entities | `otc6/<id>/status` → `online`/`offline` |
 | Boiler-link health | `binary_sensor` | healthy / unhealthy |
-| Readable continuous | `sensor` | ID 25 Tboiler, pressures, modulation |
-| Readable flags | `binary_sensor` | flame, fault, CH active bits from ID 0 (when supported) |
-| Writable numeric | `number` (min/max/step) | generic writable floats/ints |
+| Readable continuous | `sensor` | ID 25 Tboiler, pressures, modulation, u8/u16 codes |
+| Readable flag8 / bitfield (whole ID) | `sensor` (raw) **plus** additive `binary_sensor` for documented bits | ID 0 Status raw entity always; flame/fault/CH-active projections when supported |
+| Writable numeric | `number` (min/max/step) | generic writable floats/ints; raw flag8 write |
 | Writable boolean / enable | `switch` | CH enable path via Status write when supported |
 | CH water climate UX | optional convenience `climate` for ID 1 + related status | MUST NOT replace per-ID entities (FR-002) |
 | CH setpoint reject | status topic `otc6/<id>/ot/1/rejection` (required); optional `event` / diagnostic `binary_sensor` | topic alone satisfies FR-013; entity is additive UX |
+
+Normative encoding→component defaults: `data-model.md` Default HA component map; contract summary in `contracts/mqtt-ha-discovery.md`.
 
 Publish retained discovery configs after catalog validation; re-publish on reconnect so HA restart recovers entities (HA MQTT discovery guidance).
 
@@ -126,9 +128,9 @@ Publish retained discovery configs after catalog validation; re-publish on recon
 
 ## 9. Boiler-link health threshold
 
-**Decision**: Unhealthy after **3 consecutive failed** OT exchanges at ≥1 Hz keepalive/status cadence (or equivalent ~3 s window); healthy again after **one successful** keepalive/status exchange (FR-012). Distinct from MQTT LWT availability.
+**Decision**: Unhealthy after **3 consecutive failed** OT exchanges at ≥1 Hz keepalive/status cadence (or equivalent ~3 s window); healthy again after **one successful** keepalive/status exchange (FR-012). Distinct from MQTT LWT availability. **Unhealthy does not pre-reject MQTT writes** — still attempt OT (subject to fail-safe + ID 1 range); failure → `ot_failed`, not a `rejected_link` gate (FR-004).
 
-**Rationale**: Clarification session default; avoids flapping on single glitch.
+**Rationale**: Clarification session default; avoids flapping on single glitch; keeps command path aligned with “observe non-success” rather than inventing a second refuse mode beside fail-safe.
 
 ---
 

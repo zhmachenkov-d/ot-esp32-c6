@@ -6,7 +6,7 @@
 
 **Status**: Ready for implementation
 
-**Input**: User description: "thin OT master on ESP32-C6, Wi‑Fi MQTT + Discovery, small entity set, OT cadence + fail-safe; Zigbee and Thread out of scope." (Entity-set scope later expanded in Clarifications: all boiler-supported readable/writable OpenTherm Data IDs.)
+**Input**: User description: "thin OT master on ESP32-C6, Wi‑Fi MQTT + Discovery, OT cadence + fail-safe; Zigbee and Thread out of scope." Entity scope (clarified): **all boiler-supported readable/writable OpenTherm Data IDs**, plus MQTT availability and boiler-link health—not a fixed small/CH-only subset.
 
 **Assessment handoff**: `.specify/assessments/opentherm-gateway/decision.md` (go — Option C)
 
@@ -74,7 +74,7 @@ As a household occupant, if Wi‑Fi or the MQTT broker drops, the boiler must no
 
 1. **Given** normal HA control is working, **When** Wi‑Fi or MQTT becomes unavailable, **Then** the gateway continues OpenTherm master keepalive/polling at the required cadence and applies the fail-safe heating policy with no undefined demand.
 2. **Given** the gateway is in fail-safe due to link loss, **When** connectivity returns, **Then** entities become available again and new Home Assistant commands are accepted under normal rules.
-3. **Given** fail-safe is active, **When** Home Assistant still has stale UI state, **Then** the gateway does not invent heat demand from outdated remote commands received after the outage window without a fresh operator action after recovery (or documents if last-will/retained messages are honored—see Assumptions).
+3. **Given** fail-safe is active (or just ending), **When** Home Assistant still has stale or retained write state, **Then** the gateway does not invent heat demand from retained storms: on recovery it may apply **at most one** retained CH Control setpoint (ID 1) after link-up debounce, MUST NOT auto-apply retained writes for other Data IDs, and otherwise accepts only fresh post-recovery commands (see Assumptions).
 
 ---
 
@@ -99,7 +99,7 @@ As a household occupant, if Wi‑Fi or the MQTT broker drops, the boiler must no
 - **FR-001**: The gateway MUST act as OpenTherm **master** toward a single connected boiler (or compatible slave) and maintain master keepalive / status communication at least once per second under normal and degraded HA-link conditions.
 - **FR-002**: The gateway MUST expose via MQTT Discovery: MQTT device availability; an explicit **boiler-link healthy/unhealthy** entity; **one Home Assistant entity for every OpenTherm Data ID the connected boiler supports for reading**; and **a writable Home Assistant control for every OpenTherm Data ID the connected boiler supports for writing**. Unsupported Data IDs MUST NOT be presented as live fabricated values. Convenience mappings (e.g. climate UI for Control setpoint ID 1 / `TSet`, sensor for ID 25 / `Tboiler`) MAY be used where they improve HA UX, but MUST NOT replace or hide the requirement to cover the full supported readable/writable set.
 - **FR-003**: The gateway MUST publish updates for supported readable Data ID values so Home Assistant shows changes within the freshness bounds in Success Criteria under normal Wi‑Fi and broker conditions (measured from successful OpenTherm read of that ID).
-- **FR-004**: The gateway MUST accept commands from Home Assistant over MQTT for every boiler-supported writable Data ID, execute the corresponding OpenTherm write, and reflect success or failure in entity state.
+- **FR-004**: The gateway MUST accept commands from Home Assistant over MQTT for every boiler-supported writable Data ID, execute the corresponding OpenTherm write, and reflect success or failure in entity state. **Boiler-link unhealthy MUST NOT by itself pre-reject** remote writes: the gateway MUST still attempt the OpenTherm write (subject to fail-safe refusal and ID 1 range checks); on exchange failure the outcome is failure/`ot_failed` with no false success—not a silent success and not a link-gated reject before the attempt.
 - **FR-005**: The gateway MUST obtain Wi‑Fi connectivity and connect to an operator-configured MQTT broker on the local network; credentials MUST be configurable by the operator (not hard-coded in source) via a **SoftAP / captive-portal web UI** that collects Wi‑Fi and MQTT broker settings. After first commissioning, re-entry to SoftAP provisioning MUST be via a **physical button long-press (or board-equivalent input)** that forces SoftAP mode and clears saved Wi‑Fi/MQTT credentials into provisioning; v1 MUST NOT rely on auto SoftAP-on-failure alone or on MQTT/LAN-only reconfiguration for credential recovery.
 - **FR-006**: When Wi‑Fi or MQTT is unavailable, the gateway MUST enter a documented fail-safe mode: continue OpenTherm keepalive/polling, **hold the last commanded CH setpoint** (do not clear or invent a new remote demand), and refuse to apply **any** new remote Data ID writes until the link is healthy again.
 - **FR-007**: The product MUST NOT implement Zigbee in any role (including dual-radio firmware images) for this feature.
@@ -143,9 +143,9 @@ As a household occupant, if Wi‑Fi or the MQTT broker drops, the boiler must no
 - Entity scope is the **boiler-supported OpenTherm Data ID catalog** (all readable IDs visible; all writable IDs controllable), plus MQTT availability and boiler-link health—not a fixed CH-only subset. Certifying every boiler SKU’s quirks remains out of scope; exposure follows per-boiler support discovery.
 - MQTT Discovery prefix and entity patterns follow Home Assistant’s standard expectations; operator uses a LAN broker (e.g. HA Mosquitto add-on) reachable over IPv4 Wi‑Fi.
 - TLS for MQTT is optional for a trusted LAN in v1; username/password (or equivalent) are supported when the broker requires them.
-- On reconnect, retained MQTT write messages are either ignored until a fresh post-recovery command or applied once under a documented rule—default: **apply at most one retained CH setpoint (ID 1) only after link-up debounce**, then follow live commands; retained storms for other writable IDs MUST NOT spiral unintended boiler state (refine in plan if needed).
+- On reconnect, retained MQTT write messages: **apply at most one retained CH setpoint (ID 1) only after link-up debounce**, then follow live commands; retained storms for other writable IDs MUST NOT be auto-applied (MUST NOT spiral unintended boiler state). See research §6 / US3 AC#3.
 - Project constitution describes OpenTherm↔Wi‑Fi MQTT / Home Assistant Discovery as the product surface (v2.0.0+); this feature does not ship Zigbee or Thread.
 - Existing Zigbee-oriented knowledge/playbooks in the repo remain historical/reference only for this feature; they are not a delivery dependency (OpenTherm Data ID and discovery knowledge remains relevant).
 - Single boiler, single gateway; multi-boiler and multi-zone orchestration are out of scope.
 - Numeric freshness/command bounds in SC-001/SC-002 may be tightened later but are the acceptance floor for this release.
-- Exact HA entity types per Data ID (sensor, number, switch, climate, etc.) are chosen in planning to match HA MQTT Discovery capabilities while satisfying FR-002/FR-004.
+- Default HA entity types per Data ID follow the encoding-class map in `data-model.md` / `contracts/mqtt-ha-discovery.md` (satisfying FR-002/FR-004); fixture overrides are allowed for documented exceptions only.

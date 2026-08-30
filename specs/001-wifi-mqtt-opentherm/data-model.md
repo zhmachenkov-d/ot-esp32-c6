@@ -117,11 +117,12 @@ Inbound HA → gateway write intent.
 | `data_id` | uint8 | Must be catalog-writable |
 | `value` | typed | Decoded per ID encoding |
 | `received_at` | timestamp | |
-| `outcome` | enum | `accepted` \| `rejected_range` \| `rejected_failsafe` \| `rejected_link` \| `ot_failed` |
+| `outcome` | enum | `accepted` \| `rejected_range` \| `rejected_failsafe` \| `ot_failed` |
 
 **Rules**:
-- If `failsafe` or boiler-link unhealthy policy requires: do not claim success; reflect failure/unchanged
-- ID 1: range check against `SetpointBounds` before OT write
+- If `failsafe` active (`remote_writes_allowed=false`): outcome `rejected_failsafe`; no OT write; no false success
+- Boiler-link `unhealthy` does **not** pre-reject: still attempt the OT write (after range/fail-safe checks); on exchange failure → `ot_failed`; on success → `accepted` (may clear consecutive failures / restore healthy per BoilerLink transitions)
+- ID 1: range check against `SetpointBounds` before OT write → `rejected_range` if out of bounds
 - Serialize onto OT bus; must not starve keepalive
 
 ---
@@ -176,3 +177,15 @@ Explicit operator-visible rejection (FR-013).
 - Temperatures: OpenTherm f8.8 ↔ °C float for MQTT JSON/state strings (see `knowledge/opentherm` data encoding).
 - Status flags (ID 0): bitfields mapped to additive `binary_sensor` / `switch` projections (see task T021b) without losing the underlying ID 0 entity when supported.
 - Convenience `climate` (optional) is additive UX only; per-ID entities remain required.
+
+### Default HA component map (v1)
+
+Normative defaults by OpenTherm value class (directory / `knowledge/opentherm`). Fixture overrides MAY change a specific ID; omitting a supported ID is forbidden.
+
+| OT value class | Readable HA component | Writable HA component |
+|----------------|----------------------|------------------------|
+| Continuous numeric (`f8.8`, `s8.8`, `u8`, `u16`, `s16`, …) | `sensor` | `number` |
+| Whole-ID flag8 / bitfield (raw) | `sensor` (raw / numeric state string) | `number` (raw) unless a documented single-bit enable uses `switch` |
+| Documented single-bit enable / boolean (e.g. Status CH enable) | additive `binary_sensor` when projected | `switch` |
+| Status (ID 0) known flag projections | additive `binary_sensor` / `switch` **in addition to** the ID 0 entity | per T021b / `knowledge/opentherm/data-id-0-status.md` |
+| Optional CH `climate` (ID 1 UX) | — | additive only; MUST NOT replace per-ID entities |
