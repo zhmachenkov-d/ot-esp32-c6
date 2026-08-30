@@ -20,6 +20,8 @@ static bool s_connected;
 static bool s_force_offline_birth;
 static mqtt_ha_message_cb_t s_msg_cb;
 static void *s_msg_ctx;
+static mqtt_ha_connected_cb_t s_connected_cb;
+static void *s_connected_ctx;
 
 void mqtt_ha_status_topic(char *buf, size_t cap, const char *device_id)
 {
@@ -39,6 +41,9 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
             mqtt_ha_publish_offline();
         } else {
             mqtt_ha_publish_birth_online();
+        }
+        if (s_connected_cb) {
+            s_connected_cb(s_connected_ctx);
         }
         break;
     case MQTT_EVENT_DISCONNECTED:
@@ -164,6 +169,12 @@ void mqtt_ha_set_message_callback(mqtt_ha_message_cb_t cb, void *ctx)
 {
     s_msg_cb = cb;
     s_msg_ctx = ctx;
+}
+
+void mqtt_ha_set_connected_callback(mqtt_ha_connected_cb_t cb, void *ctx)
+{
+    s_connected_cb = cb;
+    s_connected_ctx = ctx;
 }
 
 esp_err_t mqtt_ha_subscribe(const char *topic, int qos)

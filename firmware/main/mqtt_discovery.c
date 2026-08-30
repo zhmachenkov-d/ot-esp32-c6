@@ -81,9 +81,11 @@ int mqtt_discovery_build_sensor_config(char *buf, size_t cap, const char *device
 
 int mqtt_discovery_build_number_config(char *buf, size_t cap, const char *device_id,
                                        uint8_t id, const char *name,
-                                       float min_v, float max_v, float step)
+                                       bool has_range, float min_v, float max_v, float step)
 {
-    int n = snprintf(buf, cap,
+    int n;
+    if (has_range) {
+        n = snprintf(buf, cap,
                      "{\"name\":\"%s\",\"unique_id\":\"otc6_%s_ot_%u\","
                      "\"state_topic\":\"%s%s/ot/%u/state\","
                      "\"command_topic\":\"%s%s/ot/%u/set\","
@@ -92,6 +94,17 @@ int mqtt_discovery_build_number_config(char *buf, size_t cap, const char *device
                      APP_MQTT_TOPIC_ROOT, device_id, (unsigned)id,
                      APP_MQTT_TOPIC_ROOT, device_id, (unsigned)id,
                      (double)min_v, (double)max_v, (double)step);
+    } else {
+        n = snprintf(buf, cap,
+                     "{\"name\":\"%s\",\"unique_id\":\"otc6_%s_ot_%u\","
+                     "\"state_topic\":\"%s%s/ot/%u/state\","
+                     "\"command_topic\":\"%s%s/ot/%u/set\","
+                     "\"step\":%.2f,\"mode\":\"box\"",
+                     name ? name : "OT", device_id, (unsigned)id,
+                     APP_MQTT_TOPIC_ROOT, device_id, (unsigned)id,
+                     APP_MQTT_TOPIC_ROOT, device_id, (unsigned)id,
+                     (double)step);
+    }
     if (n < 0 || (size_t)n >= cap) {
         return -1;
     }
@@ -276,15 +289,13 @@ esp_err_t mqtt_discovery_publish_all(const char *device_id, const ot_catalog_t *
         snprintf(object_id, sizeof(object_id), "otc6_%s_ot_%u", device_id, (unsigned)id);
 
         if (e->writable && id != 0) {
+            bool has_range = ot_catalog_is_range_checked((uint8_t)id);
             ot_setpoint_bounds_t b = { .min_c = ch_min, .max_c = ch_max };
-            if (ot_catalog_is_range_checked((uint8_t)id)) {
+            if (has_range) {
                 ot_catalog_resolve_bounds(cat, (uint8_t)id, ch_min, ch_max, &b);
-            } else {
-                b.min_c = 0;
-                b.max_c = 100;
             }
             if (mqtt_discovery_build_number_config(json, sizeof(json), device_id, (uint8_t)id, nm,
-                                                   b.min_c, b.max_c, 0.5f) > 0) {
+                                                   has_range, b.min_c, b.max_c, 0.5f) > 0) {
                 publish_config("number", object_id, json);
             }
         } else {

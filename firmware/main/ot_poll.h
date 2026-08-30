@@ -52,6 +52,15 @@ typedef void (*ot_write_complete_cb_t)(uint8_t data_id, uint16_t raw,
 void ot_poll_set_write_complete_cb(ot_write_complete_cb_t cb, void *ctx);
 
 /**
+ * Called after each Status keepalive READ-DATA(id=0) completes (success or failure).
+ * Used to finalize pending CH-enable after the exchange that carries master flags.
+ */
+typedef void (*ot_status_complete_cb_t)(ot_exchange_result_t result, uint16_t status_raw,
+                                        void *ctx);
+
+void ot_poll_set_status_complete_cb(ot_status_complete_cb_t cb, void *ctx);
+
+/**
  * ID 0 special: update pending master Status flags applied on next READ-DATA(id=0).
  * Never uses WRITE-DATA(id=0).
  */

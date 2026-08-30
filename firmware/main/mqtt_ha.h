@@ -13,6 +13,9 @@ extern "C" {
 typedef void (*mqtt_ha_message_cb_t)(const char *topic, const char *payload, int len,
                                      bool retain, void *ctx);
 
+/** Invoked on MQTT_EVENT_CONNECTED (after birth/offline publish). */
+typedef void (*mqtt_ha_connected_cb_t)(void *ctx);
+
 esp_err_t mqtt_ha_init(const char *device_id,
                        const char *host, uint16_t port,
                        const char *username, const char *password,
@@ -30,6 +33,8 @@ esp_err_t mqtt_ha_publish_offline(void);
 esp_err_t mqtt_ha_publish(const char *topic, const char *payload, int qos, bool retain);
 
 void mqtt_ha_set_message_callback(mqtt_ha_message_cb_t cb, void *ctx);
+
+void mqtt_ha_set_connected_callback(mqtt_ha_connected_cb_t cb, void *ctx);
 
 esp_err_t mqtt_ha_subscribe(const char *topic, int qos);
 

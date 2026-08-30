@@ -37,13 +37,27 @@ void mqtt_commands_set_failsafe(failsafe_state_t *fs);
 esp_err_t mqtt_commands_start_subscriptions(void);
 
 /**
- * After fail-safe recovery debounce: allow at most one retained ot/1/set;
+ * Arm retained-write gate for an MQTT (re)connect / first subscribe session:
+ * after APP_LINK_UP_DEBOUNCE_MS from arm time, allow at most one retained ot/1/set;
  * drop retained storms for other writables until a live (non-retained) command.
+ * Call on every MQTT connect (not only fail-safe clear).
  */
 void mqtt_commands_begin_post_recovery(void);
 
+/** Monotonic clock for retained-gate debounce (host tests + runtime tick). */
+void mqtt_commands_set_time_ms(uint32_t now_ms);
+
 /** Host-testable retained-write gate. Returns true if the set should be applied. */
 bool mqtt_commands_allow_inbound(uint8_t data_id, bool retain);
+
+/**
+ * Finalize a pending Status CH-enable after the next keepalive READ-DATA(id=0).
+ * Success → ACCEPTED (projections/climate only; does not rewrite ot/0/state as 0/1).
+ * Failure → OT_FAILED + ot/0/rejection; master flags restored.
+ */
+writable_cmd_outcome_t mqtt_commands_on_status_complete(ot_exchange_result_t result,
+                                                        uint16_t status_raw,
+                                                        writable_command_t *out_cmd);
 
 /** Process one inbound set payload (host-testable core). May return QUEUED. */
 writable_cmd_outcome_t mqtt_commands_handle(uint8_t data_id, const char *payload,

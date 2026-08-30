@@ -34,6 +34,11 @@ void mqtt_ha_set_message_callback(mqtt_ha_message_cb_t cb, void *ctx)
     (void)cb;
     (void)ctx;
 }
+void mqtt_ha_set_connected_callback(mqtt_ha_connected_cb_t cb, void *ctx)
+{
+    (void)cb;
+    (void)ctx;
+}
 esp_err_t mqtt_ha_subscribe(const char *topic, int qos)
 {
     (void)topic;

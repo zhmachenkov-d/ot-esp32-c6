@@ -36,11 +36,34 @@ void test_sensor_config_per_id(void)
     TEST_ASSERT_NOT_NULL(strstr(buf, "unique_id\":\"otc6_aabbccddeeff_ot_25\""));
 }
 
+void test_number_config_range_checked_has_bounds(void)
+{
+    char buf[1024];
+    int n = mqtt_discovery_build_number_config(buf, sizeof(buf), "aabbccddeeff", 1,
+                                               "OT 1", true, 10.0f, 90.0f, 0.5f);
+    TEST_ASSERT_TRUE(n > 0);
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"min\":10.00"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"max\":90.00"));
+}
+
+void test_number_config_non_range_omits_bounds(void)
+{
+    char buf[1024];
+    int n = mqtt_discovery_build_number_config(buf, sizeof(buf), "aabbccddeeff", 9,
+                                               "OT 9", false, 0.0f, 100.0f, 0.5f);
+    TEST_ASSERT_TRUE(n > 0);
+    TEST_ASSERT_NULL(strstr(buf, "\"min\":"));
+    TEST_ASSERT_NULL(strstr(buf, "\"max\":"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "command_topic"));
+}
+
 int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_device_block_shape);
     RUN_TEST(test_boiler_link_config);
     RUN_TEST(test_sensor_config_per_id);
+    RUN_TEST(test_number_config_range_checked_has_bounds);
+    RUN_TEST(test_number_config_non_range_omits_bounds);
     return UNITY_END();
 }

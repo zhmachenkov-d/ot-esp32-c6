@@ -39,9 +39,13 @@ int mqtt_discovery_build_sensor_config(char *buf, size_t cap, const char *device
 
 int mqtt_discovery_build_boiler_link_config(char *buf, size_t cap, const char *device_id);
 
+/**
+ * HA number discovery. When has_range is false, omit min/max so HA does not invent
+ * a gateway range gate (FR-013: only v1 range-checked IDs advertise bounds).
+ */
 int mqtt_discovery_build_number_config(char *buf, size_t cap, const char *device_id,
                                        uint8_t id, const char *name,
-                                       float min_v, float max_v, float step);
+                                       bool has_range, float min_v, float max_v, float step);
 
 int mqtt_discovery_build_switch_config(char *buf, size_t cap, const char *device_id,
                                        uint8_t id, const char *name);

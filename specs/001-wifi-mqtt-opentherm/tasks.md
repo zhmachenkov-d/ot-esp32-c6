@@ -259,3 +259,15 @@ Task: "Implement SetpointBounds resolution (prefer boiler limit IDs)"
 - [X] T048 Complete remaining T043 evidence: measure and record free heap after OT+MQTT (≥ 64 KiB) and sign off open HIL V1–V9 under `firmware/tests/hil/results/` per plan Constraints / SC-001–SC-005 (partial)
 - [X] T049 Wire climate `mode` command/state topics to Status CH-enable (or remove dead `climate/mode/{set,state}` from discovery) in `firmware/main/mqtt_discovery.c` / `firmware/main/mqtt_commands.c` per T041 (partial)
 - [X] T050 Compile production SoftAP `provision_validate` into host tests instead of the duplicated stub in `firmware/tests/host/host_provision_validate.c` per Constitution II, T016 (partial)
+
+---
+
+## Phase 8: Convergence
+
+**Purpose**: Close remaining gaps between checked-off Phase 7 work and current code vs spec/plan/constitution
+
+- [X] T051 Wire retained-write gate + **2 s** link-up debounce on **every** MQTT (re)connect / first subscribe—not only fail-safe clear—so at most one retained `ot/1/set` applies and other retained `ot/<N>/set` are dropped in `firmware/main/main.c` / `firmware/main/mqtt_commands.c` / `firmware/main/mqtt_ha.c`; extend host tests per US3/AC3, Assumptions, `contracts/mqtt-ha-discovery.md` Retained writes, T037/T046 (partial)
+- [X] T052 Reflect Status CH-enable (ID 0) only after the next keepalive/status `READ-DATA(id=0)` succeeds; on failure publish `ot/0/rejection` with `reason=ot_failed` and leave reflected state unchanged (no immediate accept) in `firmware/main/mqtt_commands.c` / `firmware/main/ot_poll.c`; update host tests that currently assert immediate `ACCEPTED` per FR-004, US2/AC3, US2/AC4, Constitution II (contradicts)
+- [X] T053 Re-publish MQTT Discovery configs (and additive climate if still enabled) on plain MQTT reconnect / `MQTT_EVENT_CONNECTED`, not only boot and fail-safe recovery, in `firmware/main/mqtt_ha.c` / `firmware/main/main.c` / `firmware/main/mqtt_discovery.c` per T022, research § discovery, US1/AC4 (partial)
+- [X] T054 Update catalog `ids[0].last_raw` / `has_raw` from keepalive Status exchanges and stop publishing CH-enable accept as `"0"`/`"1"` on `ot/0/state` (keep raw Status on the ID 0 entity; projections/climate carry CH enable) in `firmware/main/ot_poll.c` / `firmware/main/mqtt_commands.c` per FR-002, FR-003, Constitution III (partial)
+- [X] T055 Stop advertising HA `number` min/max **0..100** for non–range-checked writables (omit bounds or use encoding-appropriate limits) so HA UI does not invent a gateway range gate in `firmware/main/mqtt_discovery.c` per FR-013 (partial)

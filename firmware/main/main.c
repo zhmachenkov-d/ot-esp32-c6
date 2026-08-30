@@ -30,8 +30,47 @@ static failsafe_state_t s_failsafe;
 static EventGroupHandle_t s_wifi_events;
 static bool s_wifi_up;
 static bool s_got_ip;
+static bool s_mqtt_session_armed;
+static bool s_mqtt_session_ready;
+static uint32_t s_mqtt_session_since_ms;
 
 #define WIFI_OK_BIT BIT0
+
+static void mqtt_session_arm(void)
+{
+    /* Every MQTT (re)connect: arm retained gate; subscribe after 2 s debounce (T051/T053). */
+    uint32_t now = xTaskGetTickCount() * portTICK_PERIOD_MS;
+    mqtt_commands_set_time_ms(now);
+    mqtt_commands_begin_post_recovery();
+    s_mqtt_session_armed = true;
+    s_mqtt_session_ready = false;
+    s_mqtt_session_since_ms = now;
+}
+
+static void on_mqtt_connected(void *ctx)
+{
+    (void)ctx;
+    mqtt_session_arm();
+}
+
+static void mqtt_session_tick(uint32_t now_ms)
+{
+    mqtt_commands_set_time_ms(now_ms);
+    if (!s_mqtt_session_armed || s_mqtt_session_ready) {
+        return;
+    }
+    if (!mqtt_ha_connected() || !(s_wifi_up && s_got_ip)) {
+        return;
+    }
+    if ((now_ms - s_mqtt_session_since_ms) < APP_LINK_UP_DEBOUNCE_MS) {
+        return;
+    }
+    mqtt_discovery_publish_all(s_cfg.device_id, &s_catalog, s_cfg.ch_min_c, s_cfg.ch_max_c);
+    mqtt_discovery_publish_climate(s_cfg.device_id, s_cfg.ch_min_c, s_cfg.ch_max_c);
+    mqtt_commands_start_subscriptions();
+    s_mqtt_session_ready = true;
+    ESP_LOGI(TAG, "MQTT session ready (discovery + subscribe after debounce)");
+}
 
 static void wifi_event_handler(void *arg, esp_event_base_t base, int32_t id, void *data)
 {
@@ -75,6 +114,7 @@ static void failsafe_task(void *arg)
         bool mqtt_up = mqtt_ha_connected();
         uint32_t now = xTaskGetTickCount() * portTICK_PERIOD_MS;
         failsafe_on_link(&s_failsafe, s_wifi_up && s_got_ip, mqtt_up, now);
+        mqtt_session_tick(now);
         bool active = failsafe_is_active(&s_failsafe);
         if (active && !was_active) {
             /* Option A: present offline when active — hold live NVS last CH (T047) */
@@ -88,13 +128,19 @@ static void failsafe_task(void *arg)
         } else if (!active && was_active) {
             ot_poll_set_hold_ch_setpoint(false, 0);
             mqtt_ha_publish_birth_online();
-            mqtt_discovery_publish_all(s_cfg.device_id, &s_catalog, s_cfg.ch_min_c, s_cfg.ch_max_c);
-            mqtt_commands_begin_post_recovery();
-            mqtt_commands_start_subscriptions();
+            /* Retained gate + rediscovery/subscribe happen via mqtt_session_arm on reconnect
+             * or re-arm here if MQTT stayed up through fail-safe. */
+            if (mqtt_up) {
+                mqtt_session_arm();
+            }
             ESP_LOGI(TAG, "fail-safe cleared");
         } else if (!active && failsafe_app_availability_online(&s_failsafe) &&
                    s_failsafe.phase == FAILSAFE_ENTRY_TIMER) {
             /* stay online during entry timer — no publish spam */
+        }
+        if (!mqtt_up) {
+            s_mqtt_session_armed = false;
+            s_mqtt_session_ready = false;
         }
         was_active = active;
         vTaskDelay(pdMS_TO_TICKS(200));
@@ -176,6 +222,7 @@ void app_main(void)
     ESP_ERROR_CHECK(mqtt_ha_init(s_cfg.device_id, s_cfg.mqtt_host, s_cfg.mqtt_port,
                                  s_cfg.mqtt_username, s_cfg.mqtt_password, s_cfg.mqtt_tls,
                                  ca_pem));
+    mqtt_ha_set_connected_callback(on_mqtt_connected, NULL);
     ESP_ERROR_CHECK(mqtt_ha_start());
 
     /* Catalog: load cache then discover/validate */
@@ -188,14 +235,23 @@ void app_main(void)
     }
 
     mqtt_commands_init(s_cfg.device_id, &s_catalog, s_cfg.ch_min_c, s_cfg.ch_max_c);
-    /* Wait briefly for MQTT */
+    /* Wait briefly for MQTT; discovery/subscribe run after link-up debounce (T051/T053) */
     for (int i = 0; i < 50 && !mqtt_ha_connected(); i++) {
         vTaskDelay(pdMS_TO_TICKS(100));
     }
+    if (mqtt_ha_connected() && !s_mqtt_session_armed) {
+        mqtt_session_arm();
+    }
+    /* Drain debounce so first subscribe happens before we log heap */
+    for (int i = 0; i < 15; i++) {
+        uint32_t now = xTaskGetTickCount() * portTICK_PERIOD_MS;
+        mqtt_session_tick(now);
+        if (s_mqtt_session_ready) {
+            break;
+        }
+        vTaskDelay(pdMS_TO_TICKS(200));
+    }
     if (mqtt_ha_connected()) {
-        mqtt_discovery_publish_all(s_cfg.device_id, &s_catalog, s_cfg.ch_min_c, s_cfg.ch_max_c);
-        mqtt_discovery_publish_climate(s_cfg.device_id, s_cfg.ch_min_c, s_cfg.ch_max_c);
-        mqtt_commands_start_subscriptions();
         size_t free_heap = heap_caps_get_free_size(MALLOC_CAP_DEFAULT);
         ESP_LOGI(TAG, "free heap after OT+MQTT: %u bytes (budget >= 65536)", (unsigned)free_heap);
     }
