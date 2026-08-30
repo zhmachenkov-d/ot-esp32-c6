@@ -21,7 +21,7 @@ MCU GPIO cannot drive OT bus voltages/currents — this board (or Melnyk’s ada
 | Boiler OT bus | X1 | 2-wire, polarity-free (diode bridge) |
 | MCU TTL | X2 | **GND**, **RX**, **TX**, **VCC** (3.3 V or 5 V) |
 
-Wire to this project’s defaults (**GPIO12** in / **GPIO13** out):
+Wire to this project’s defaults (**GPIO2** in / **GPIO3** out):
 
 | Adapter pin | MCU / library | Role |
 |-------------|---------------|------|

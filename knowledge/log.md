@@ -1,5 +1,10 @@
 # Directory Update Log
 
+## 2026-08-30
+* **Update**: Project default board → [WeAct ESP32-C6 Mini](/zephyr/weact-esp32c6-mini.md); [OpenTherm GPIO Wiring](/bridge/opentherm-gpio-wiring.md) defaults GPIO2 in / GPIO3 out; [WeAct ESP32-C6-A](/esp32/weact-esp32-c6-a.md) no longer default.
+* **Creation**: Added [WeAct ESP32-C6 Mini (Zephyr)](/zephyr/weact-esp32c6-mini.md) from `wiki/raw/zephyr/2026-08-30-weact-esp32c6-mini.md` (Zephyr board docs).
+* **Update**: Linked [WeAct ESP32-C6-A](/esp32/weact-esp32-c6-a.md) and [ESP32](/esp32/) index to the Mini board; added [Zephyr](/zephyr/) directory.
+
 ## 2026-08-29
 * **Creation**: Added [xyzroe OpenTherm-TTL Adapter](/opentherm/xyzroe-opentherm-ttl-adapter.md) from `wiki/raw/opentherm/2022-06-xyzroe-opentherm-ttl-adapter.md` (+ schematic PNG).
 * **Update**: Linked [OpenTherm GPIO Wiring](/bridge/opentherm-gpio-wiring.md) and [OpenTherm Protocol](/opentherm/opentherm-protocol.md) to the xyzroe adapter.

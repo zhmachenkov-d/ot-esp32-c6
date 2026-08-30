@@ -1,7 +1,7 @@
 ---
 type: Hardware
 title: WeAct ESP32-C6-A
-description: DevKitC-1 pin-compatible ESP32-C6 dev board; default hardware for this project.
+description: DevKitC-1 pin-compatible ESP32-C6 WROOM board (former project default; superseded by Mini).
 resource: https://github.com/WeActStudio/WeActStudio.ESP32-C6-A
 tags: [esp32, board, weact]
 timestamp: 2026-07-02T00:00:00Z
@@ -23,7 +23,7 @@ The [WeActStudio ESP32-C6-A](https://github.com/WeActStudio/WeActStudio.ESP32-C6
 | Native USB | USB_DP, USB_DN | |
 | BOOT / RESET | SW1, CHIP_PU | Auto-program via DTR/RTS |
 
-Headers **H1** and **H2** expose DevKitC-1-style GPIO breakout including IO12 and IO13 (default [OpenTherm GPIO wiring](/bridge/opentherm-gpio-wiring.md)).
+Headers **H1** and **H2** expose DevKitC-1-style GPIO breakout including IO12 and IO13. Current project OpenTherm defaults are on Mini — see [OpenTherm GPIO Wiring](/bridge/opentherm-gpio-wiring.md).
 
 ## Design assets
 
@@ -31,6 +31,10 @@ Headers **H1** and **H2** expose DevKitC-1-style GPIO breakout including IO12 an
 - Board outline: `Hardware/ESP32C6-A Board Shape 外形.pdf`
 
 Pair schematic with board outline for enclosure design and peripheral wiring.
+
+## Related boards
+
+Project default hardware is [WeAct ESP32-C6 Mini](/zephyr/weact-esp32c6-mini.md) (ESP32-C6FH4 chip-down, Zephyr target `weact_esp32c6_mini`), not DevKitC-1 pin-compatible.
 
 ## Software target
 
