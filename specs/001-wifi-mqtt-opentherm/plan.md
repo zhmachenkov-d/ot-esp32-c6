@@ -30,7 +30,7 @@ Technical approach: native ESP-IDF app (C) with `sazanof/opentherm` (validate on
 
 **Constraints**: No Zigbee / no OpenThread in delivered image (FR-007/008); SoftAP + button long-press re-provision only (FR-005); reject out-of-range CH setpoint with explicit signal (FR-013); HA messaging must not starve OT (FR-011); secrets never in git; flash/RAM within ESP32-C6FH4 (4 MB) headroom
 
-**Scale/Scope**: Single gateway, single boiler; Data IDs 0–127 discovery → full supported read/write HA exposure (not a fixed small subset); SoftAP settings UI; meta entities (availability, boiler-link health, setpoint rejection diagnostic)
+**Scale/Scope**: Single gateway, single boiler; Data IDs 0–127 discovery → full supported read/write HA exposure (not a fixed small subset); SoftAP settings UI; meta entities (availability, boiler-link health); CH setpoint rejection via MQTT status topic (optional HA diagnostic/`event` entity — not required for FR-013)
 
 ## Constitution Check
 

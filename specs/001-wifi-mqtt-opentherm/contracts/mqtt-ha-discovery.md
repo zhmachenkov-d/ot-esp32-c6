@@ -91,7 +91,7 @@ For each **available writable** ID `N`:
 }
 ```
 
-Optional: also discover `event` or diagnostic `binary_sensor` that toggles/pulses on reject so the operator sees an entity, not only a topic.
+Optional: also discover `event` or diagnostic `binary_sensor` that toggles/pulses on reject so the operator sees an entity, not only a topic. **Not required for FR-013** — the rejection status topic alone is the v1 bar.
 
 **Invariant**: On reject, `otc6/<device_id>/ot/1/state` remains last accepted value (not the attempted out-of-range value).
 

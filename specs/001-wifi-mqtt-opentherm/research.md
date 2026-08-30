@@ -67,7 +67,7 @@ All Technical Context unknowns and integration choices resolved below. Sources: 
 | Writable numeric | `number` (min/max/step) | generic writable floats/ints |
 | Writable boolean / enable | `switch` | CH enable path via Status write when supported |
 | CH water climate UX | optional convenience `climate` for ID 1 + related status | MUST NOT replace per-ID entities (FR-002) |
-| CH setpoint reject | `event` or `binary_sensor` diagnostic + status topic | explicit rejection signal (FR-013) |
+| CH setpoint reject | status topic `otc6/<id>/ot/1/rejection` (required); optional `event` / diagnostic `binary_sensor` | topic alone satisfies FR-013; entity is additive UX |
 
 Publish retained discovery configs after catalog validation; re-publish on reconnect so HA restart recovers entities (HA MQTT discovery guidance).
 
@@ -83,12 +83,12 @@ Publish retained discovery configs after catalog validation; re-publish on recon
 ## 5. CH Control setpoint bounds and rejection
 
 **Decision**:
-- Effective **max**: boiler CH max-limit Data ID when available (commonly **ID 57**); else SoftAP/NVS value seeded from firmware default **90.0 °C**.
-- Effective **min**: boiler CH min-limit ID when offered; else SoftAP/NVS seeded from firmware default **10.0 °C**.
-- Out-of-range MQTT write: **reject** — no OT write, keep last-accepted reflected setpoint, publish explicit rejection (MQTT status/event payload with reason `out_of_range` + attempted value).
+- Effective **max**: boiler CH max-limit Data ID when available (commonly **ID 57** / Max CH water setpoint); else SoftAP/NVS value seeded from firmware default **90.0 °C**.
+- Effective **min**: SoftAP/NVS seeded from firmware default **10.0 °C**. **v1 assumes no standard OpenTherm Data ID for CH Control setpoint lower limit**; use a boiler min-limit ID only if it is present in the catalog **and** listed in write-safe/bound fixtures (none required at ship). Do not invent a min-limit ID.
+- Out-of-range MQTT write: **reject** — no OT write, keep last-accepted reflected setpoint, publish explicit rejection on status topic `otc6/<id>/ot/1/rejection` (reason `out_of_range` + attempted value). Optional HA diagnostic/`event` discovery may mirror that signal later.
 - SoftAP UI persists operator fallback min/max (FR-014).
 
-**Rationale**: Matches FR-013 clarifications; defaults are conventional CH water bounds and overridable.
+**Rationale**: Matches FR-013 clarifications; ID 57 is the documented max-limit in project knowledge; no project-canonical min-limit ID exists, so SoftAP min is the default lower bound.
 
 **Alternatives considered**: Silent clamp (rejected in clarify); HA-only min/max without reject signal (rejected).
 

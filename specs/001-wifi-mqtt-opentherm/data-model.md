@@ -99,9 +99,9 @@ Effective CH Control setpoint (ID 1) limits.
 
 | Field | Type | Notes |
 |-------|------|-------|
-| `min_c` | float | Prefer boiler min-limit ID; else GatewayDevice.ch_min_c |
+| `min_c` | float | SoftAP/firmware `ch_min_c` in v1; override only if a fixture-listed boiler min-limit ID is catalog-available |
 | `max_c` | float | Prefer boiler max-limit ID (e.g. 57); else ch_max_c |
-| `source_min` | enum | `boiler` \| `config` |
+| `source_min` | enum | `boiler` \| `config` (expect `config` unless fixture override) |
 | `source_max` | enum | `boiler` \| `config` |
 
 **Validation**: Commands with `value < min_c` or `value > max_c` → **Reject** (no OT write).
@@ -174,5 +174,5 @@ Explicit operator-visible rejection (FR-013).
 ## Encoding notes
 
 - Temperatures: OpenTherm f8.8 ↔ °C float for MQTT JSON/state strings (see `knowledge/opentherm` data encoding).
-- Status flags (ID 0): bitfields mapped to binary_sensor / switch projections without losing the underlying ID 0 entity when supported.
+- Status flags (ID 0): bitfields mapped to additive `binary_sensor` / `switch` projections (see task T021b) without losing the underlying ID 0 entity when supported.
 - Convenience `climate` (optional) is additive UX only; per-ID entities remain required.
