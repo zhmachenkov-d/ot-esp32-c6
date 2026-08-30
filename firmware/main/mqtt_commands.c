@@ -112,10 +112,9 @@ static void publish_accepted_state(uint8_t id, float value_f)
 {
     if (id == 0) {
         /* ID 0 entity keeps raw Status on ot/0/state; CH enable via projections/climate */
-        mqtt_discovery_publish_status_projections(s_device_id,
+        mqtt_discovery_publish_status_flag_states(s_device_id,
                                                   ot_poll_get_master_status_flags(),
-                                                  ot_poll_get_slave_status_flags(),
-                                                  true);
+                                                  ot_poll_get_slave_status_flags());
         mqtt_discovery_publish_climate_mode(s_device_id, value_f > 0.5f);
         return;
     }

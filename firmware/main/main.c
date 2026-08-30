@@ -171,10 +171,9 @@ static void state_publish_task(void *arg)
             mqtt_discovery_publish_state(s_cfg.device_id, (uint8_t)id, state);
         }
         if (s_catalog.ids[0].support == OT_SUPPORT_AVAILABLE) {
-            mqtt_discovery_publish_status_projections(s_cfg.device_id,
+            mqtt_discovery_publish_status_flag_states(s_cfg.device_id,
                                                       ot_poll_get_master_status_flags(),
-                                                      ot_poll_get_slave_status_flags(),
-                                                      s_catalog.ids[0].writable);
+                                                      ot_poll_get_slave_status_flags());
             mqtt_discovery_publish_climate_mode(s_cfg.device_id,
                                                 (ot_poll_get_master_status_flags() & 0x01) != 0);
         }

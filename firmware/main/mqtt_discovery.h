@@ -17,7 +17,15 @@ esp_err_t mqtt_discovery_publish_all(const char *device_id, const ot_catalog_t *
 esp_err_t mqtt_discovery_publish_state(const char *device_id, uint8_t id,
                                        const char *state_str);
 
-/** Additive ID 0 Status flag projections (FR-002 / T021b). */
+/** Publish live ON/OFF state for ID 0 status-flag projections (no discovery config). */
+esp_err_t mqtt_discovery_publish_status_flag_states(const char *device_id,
+                                                    uint8_t master_hb,
+                                                    uint8_t slave_lb);
+
+/**
+ * Additive ID 0 Status flag projections (FR-002 / T021b): state + discovery config.
+ * Call from one-shot discovery / session-arm paths only — not the 1 Hz state loop.
+ */
 esp_err_t mqtt_discovery_publish_status_projections(const char *device_id,
                                                     uint8_t master_hb,
                                                     uint8_t slave_lb,

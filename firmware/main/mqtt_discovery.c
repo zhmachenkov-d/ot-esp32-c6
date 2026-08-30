@@ -159,6 +159,39 @@ esp_err_t mqtt_discovery_publish_state(const char *device_id, uint8_t id, const 
     return mqtt_ha_publish(topic, state_str ? state_str : "", 0, true);
 }
 
+typedef struct {
+    const char *suffix;
+    const char *name;
+    bool on;
+    bool is_switch;
+} status_flag_proj_t;
+
+static void status_flag_projections(uint8_t master_hb, uint8_t slave_lb,
+                                    status_flag_proj_t out[5])
+{
+    out[0] = (status_flag_proj_t){ "fault", "Fault", ot_codec_flag8_get(slave_lb, 0), false };
+    out[1] = (status_flag_proj_t){ "ch_active", "CH active", ot_codec_flag8_get(slave_lb, 1), false };
+    out[2] = (status_flag_proj_t){ "dhw_active", "DHW active", ot_codec_flag8_get(slave_lb, 2), false };
+    out[3] = (status_flag_proj_t){ "flame", "Flame", ot_codec_flag8_get(slave_lb, 3), false };
+    out[4] = (status_flag_proj_t){ "ch_enable", "CH enable", ot_codec_flag8_get(master_hb, 0), true };
+}
+
+esp_err_t mqtt_discovery_publish_status_flag_states(const char *device_id,
+                                                    uint8_t master_hb,
+                                                    uint8_t slave_lb)
+{
+    char topic[96];
+    status_flag_proj_t flags[5];
+    status_flag_projections(master_hb, slave_lb, flags);
+
+    for (size_t i = 0; i < 5; i++) {
+        snprintf(topic, sizeof(topic), "%s%s/status_flag/%s", APP_MQTT_TOPIC_ROOT, device_id,
+                 flags[i].suffix);
+        mqtt_ha_publish(topic, flags[i].on ? "ON" : "OFF", 0, true);
+    }
+    return ESP_OK;
+}
+
 esp_err_t mqtt_discovery_publish_status_projections(const char *device_id,
                                                     uint8_t master_hb,
                                                     uint8_t slave_lb,
@@ -166,22 +199,14 @@ esp_err_t mqtt_discovery_publish_status_projections(const char *device_id,
 {
     char topic[96];
     char json[768];
-    const struct {
-        const char *suffix;
-        const char *name;
-        bool on;
-        bool is_switch;
-    } flags[] = {
-        { "fault", "Fault", ot_codec_flag8_get(slave_lb, 0), false },
-        { "ch_active", "CH active", ot_codec_flag8_get(slave_lb, 1), false },
-        { "dhw_active", "DHW active", ot_codec_flag8_get(slave_lb, 2), false },
-        { "flame", "Flame", ot_codec_flag8_get(slave_lb, 3), false },
-        { "ch_enable", "CH enable", ot_codec_flag8_get(master_hb, 0), true },
-    };
+    status_flag_proj_t flags[5];
+    status_flag_projections(master_hb, slave_lb, flags);
 
-    for (size_t i = 0; i < sizeof(flags) / sizeof(flags[0]); i++) {
-        snprintf(topic, sizeof(topic), "%s%s/status_flag/%s", APP_MQTT_TOPIC_ROOT, device_id, flags[i].suffix);
-        mqtt_ha_publish(topic, flags[i].on ? "ON" : "OFF", 0, true);
+    mqtt_discovery_publish_status_flag_states(device_id, master_hb, slave_lb);
+
+    for (size_t i = 0; i < 5; i++) {
+        snprintf(topic, sizeof(topic), "%s%s/status_flag/%s", APP_MQTT_TOPIC_ROOT, device_id,
+                 flags[i].suffix);
 
         char object_id[64];
         snprintf(object_id, sizeof(object_id), "otc6_%s_%s", device_id, flags[i].suffix);
