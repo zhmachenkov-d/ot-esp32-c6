@@ -8,11 +8,11 @@
 
 | Signal | Default GPIO | Notes |
 |--------|--------------|-------|
-| OT adapter in (IRQ) | 12 | Interrupt-capable |
-| OT adapter out | 13 | |
+| OT adapter in (IRQ) | 2 | WeAct ESP32-C6 Mini default; interrupt-capable |
+| OT adapter out | 3 | WeAct ESP32-C6 Mini default (keeps USB Serial/JTAG on 12/13 free) |
 | Role | Master | Single boiler slave |
 
-Adapter required (GPIO cannot drive OT bus levels). See `knowledge/bridge/opentherm-gpio-wiring.md`.
+Adapter required (GPIO cannot drive OT bus levels). See `knowledge/bridge/opentherm-gpio-wiring.md`. Historical bridge docs that cite GPIO12/13 are non-normative for this WeAct Mini feature.
 
 ## Cadence
 
@@ -28,9 +28,11 @@ Adapter required (GPIO cannot drive OT bus levels). See `knowledge/bridge/openth
 
 | Slave response | Catalog |
 |----------------|---------|
-| READ-ACK | available |
+| READ-ACK | available (readable) |
 | DATA-INVALID | available (value may be unavailable) |
 | UNKNOWN-DATAID | unsupported — no live HA entity |
+
+**Writable**: per research §3 / data-model — directory write-class + known write-safe set or safe echo write-probe; never invent values.
 
 Probe domain: Data IDs 0–127. Persist + boot-validate in NVS.
 

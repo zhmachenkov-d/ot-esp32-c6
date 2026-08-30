@@ -35,7 +35,16 @@ All Technical Context unknowns and integration choices resolved below. Sources: 
 
 ## 3. Data ID support discovery
 
-**Decision**: Probe IDs **0–127** with classification matching bridge playbook: `READ-ACK` / `DATA-INVALID` → **available** (expose); `UNKNOWN-DATAID` → unsupported (omit live entity). Persist catalog in NVS; on boot re-validate cache; expose only available IDs. Writable capability: treat available IDs that the OT spec marks as master-writeable **and** that accept a write probe (or are known write-capable when read-ack’d for that ID class) as writable controls—implementation detail in tasks: prefer write-class from OT message directory + safe write probe where needed without inventing values for unsupported IDs.
+**Decision**: Probe IDs **0–127** with classification matching bridge playbook: `READ-ACK` / `DATA-INVALID` → **available** (readable expose); `UNKNOWN-DATAID` → unsupported (omit live entity). Persist catalog in NVS; on boot re-validate cache; expose only available IDs.
+
+**Writable classification (normative for FR-004/015/SC-007)**:
+
+1. Start from IDs with `support=available` after read probe.
+2. Mark `writable=true` only when **both** hold:
+   - The OpenTherm message directory / ID class marks the ID as master-writeable (write-data / write-flag class), **and**
+   - Either (a) the ID is in the **known write-safe set** (v1: ID 0 Status flags that include CH enable, ID 1 Control setpoint, plus any other IDs explicitly listed in `ot_catalog` fixtures as write-safe), **or** (b) a **safe write probe** succeeds: master write of the last-read raw value (or documented no-op bit pattern) returns ACK—never probe with invented setpoints or enable flips.
+3. If directory says non-writable, or write probe fails / is skipped outside the known set → `writable=false` (read entity only when available).
+4. Never fabricate HA write controls for unsupported IDs.
 
 **Rationale**: FR-015 + existing `discovery-catalog` knowledge; SC-007 needs a known set S on boiler/simulator.
 

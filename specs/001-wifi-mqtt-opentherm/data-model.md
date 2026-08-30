@@ -59,8 +59,8 @@ One OpenTherm Data ID classified for this boiler.
 |-------|------|-------|
 | `id` | uint8 | 0–127 |
 | `support` | enum | `available` \| `unsupported` |
-| `readable` | bool | Available and usable as read entity |
-| `writable` | bool | Available and master-write capable for this boiler |
+| `readable` | bool | `support=available` → usable as read entity |
+| `writable` | bool | Master-write capable for this boiler (see classification below) |
 | `last_raw` | uint16 \| null | Last OT data payload |
 | `last_status` | enum | ACK / DATA_INVALID / etc. |
 | `poll_tier` | enum | `fast` \| `slow` \| `promoted` |
@@ -68,6 +68,13 @@ One OpenTherm Data ID classified for this boiler.
 | `unit` / `device_class` | string \| null | HA hints where known |
 
 **Validation**: Unsupported IDs MUST NOT appear as live fabricated HA entities. Catalog from discovery/validation only.
+
+**Writable classification** (must match research §3):
+
+1. `writable` requires `support=available`.
+2. OpenTherm directory/class must allow master write for that ID.
+3. Then either ID ∈ known write-safe set (v1 minimum: **0**, **1**, plus fixture-listed IDs) **or** safe write-probe ACK (echo last-read raw / documented no-op—never invent values).
+4. Otherwise `writable=false` (readable-only when available).
 
 **Relationships**: Many comprise `SupportedCatalog`; each maps to zero or one live `DataIdEntity` (omit if unsupported).
 

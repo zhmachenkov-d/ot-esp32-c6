@@ -38,18 +38,18 @@ Technical approach: native ESP-IDF app (C) with `sazanof/opentherm` (validate on
 
 | Principle / constraint | Status | Notes |
 |------------------------|--------|-------|
-| I. Code Quality — domain modular boundaries | PASS | Modules: OT master/poll/catalog, MQTT discovery/state/commands, provisioning UI, fail-safe/link health, NVS config. Names follow Data IDs and MQTT roles, not Zigbee clusters. |
-| II. Testing Standards | PASS | Plan requires deterministic tests for encoding, catalog classification, reject bounds, discovery payloads, fail-safe transitions before treating behavior done. |
-| III. UX Consistency | PASS (mapped) | Constitution text is Zigbee/ZCL-framed; this feature applies the same rule to **MQTT Discovery entities**: consistent units, unavailable sentinels, availability vs boiler-link separation, versioned breaking topic/entity changes. |
+| I. Code Quality — domain modular boundaries | PASS | Modules: OT master/poll/catalog, MQTT discovery/state/commands, provisioning UI, fail-safe/link health, NVS config. Names follow Data IDs and MQTT roles. |
+| II. Testing Standards | PASS | Plan requires deterministic tests for encoding, catalog classification (incl. writable), reject bounds, discovery payloads, fail-safe transitions before treating behavior done. |
+| III. UX Consistency | PASS | MQTT Discovery entities: consistent units, unavailable sentinels, availability vs boiler-link separation, versioned breaking topic/entity changes (constitution v2.0.0). |
 | IV. Performance — OT poll budgets | PASS | Reuse tiered poll + ≥1 Hz keepalive; HA/MQTT work off the critical OT tick; measured budgets in design (research + data-model). |
 | V. Simplicity & YAGNI | PASS | No dual-radio, no Thread, no custom HA Core integration, no OTGW TCP serial bridge. Full supported-ID exposure is **spec-mandated**, not speculative. |
-| Embedded constraints (`knowledge/` OT/GPIO facts) | PASS | GPIO2/3 (Mini; avoid USB 12/13), adapter required, catalog/poll knowledge reused; Zigbee playbooks are historical only for this feature. |
+| Embedded constraints (`knowledge/` OT/GPIO + feature contracts) | PASS | GPIO2/3 (Mini; avoid USB 12/13), adapter required, catalog/poll knowledge reused; Zigbee playbooks historical only. |
 | Secrets | PASS | Credentials via SoftAP → NVS; `.env`/examples only in repo. |
-| Governance mismatch (constitution still Zigbee product language) | JUSTIFIED EXCEPTION | Spec Assumptions + assessment decision already require constitution amendment as governance follow-up. This plan does **not** implement Zigbee. See Complexity Tracking. |
+| Governance (product channel language) | PASS | Constitution **v2.0.0** aligns with Wi‑Fi MQTT / HA Discovery; Zigbee/Thread remain out of feature scope (FR-007/008). |
 
-**Gate result (pre-Phase 0)**: PASS WITH JUSTIFIED EXCEPTION (constitution Zigbee framing).
+**Gate result (pre-Phase 0)**: PASS WITH JUSTIFIED EXCEPTION (constitution Zigbee framing) — *superseded*.
 
-**Gate result (post-Phase 1)**: PASS WITH JUSTIFIED EXCEPTION — design artifacts stay MQTT/Wi‑Fi-only; no Zigbee/Thread interfaces introduced. Constitution amend remains a tracked follow-up outside Phase 1 deliverables.
+**Gate result (post-Phase 1)**: PASS — design artifacts stay MQTT/Wi‑Fi-only; constitution amended to v2.0.0 (2026-08-30).
 
 ## Project Structure
 
@@ -79,6 +79,7 @@ firmware/                        # ESP-IDF project root (idf.py)
 │   ├── app_config.h             # compile-time defaults (CH min/max seeds, thresholds)
 │   ├── ot_poll.c / .h           # keepalive + tiered reads/writes
 │   ├── ot_catalog.c / .h        # discovery / NVS catalog (patterns from knowledge/bridge)
+│   ├── ot_codec.c / .h          # f8.8 / typed encode-decode helpers
 │   ├── mqtt_ha.c / .h           # ESP-MQTT client, availability, LWT
 │   ├── mqtt_discovery.c / .h    # HA discovery publish + entity map
 │   ├── mqtt_commands.c / .h     # subscribe, validate, enqueue OT writes
@@ -101,5 +102,6 @@ knowledge/                       # domain facts (OT/GPIO/poll); Zigbee bridge = 
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
-| Constitution still describes OpenTherm↔Zigbee product / ZCL UX | Product direction is Wi‑Fi MQTT (assessment go + FR-007/008); amending constitution is governance, not blocked by this plan’s MQTT design | Waiting to rewrite constitution before planning would stall delivery; silent Zigbee implementation would violate the feature spec |
 | Full boiler-supported Data ID catalog in HA (vs “thin” assessment handoff) | Clarifications overturned fixed small entity set (FR-002/010/SC-007) | Small fixed set no longer meets acceptance; tiered polling addresses bus load without omitting IDs |
+
+*(Constitution Zigbee framing exception removed 2026-08-30 — constitution v2.0.0.)*

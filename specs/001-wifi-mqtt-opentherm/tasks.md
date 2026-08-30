@@ -50,11 +50,11 @@ description: "Task list for OpenTherm Wi‑Fi MQTT Gateway implementation"
 - [ ] T006 Implement NVS persistence for credentials, SoftAP CH bounds, device identity, and catalog blob in `firmware/main/nvs_store.c` and `firmware/main/nvs_store.h`
 - [ ] T007 [P] Implement OpenTherm f8.8 / typed encode-decode helpers used by poll and MQTT in `firmware/main/ot_codec.c` and `firmware/main/ot_codec.h`
 - [ ] T008 Bring up `sazanof/opentherm` as master on GPIO2/3 with documented adapter assumptions in `firmware/main/ot_poll.c` and `firmware/main/ot_poll.h` (init + single exchange API)
-- [ ] T009 Implement Data ID 0–127 discovery/classification (READ-ACK / DATA-INVALID → available; UNKNOWN-DATAID → unsupported) and NVS catalog cache in `firmware/main/ot_catalog.c` and `firmware/main/ot_catalog.h`
+- [ ] T009 Implement Data ID 0–127 discovery/classification (READ-ACK / DATA-INVALID → available; UNKNOWN-DATAID → unsupported), **writable flags per research §3 / data-model** (directory write-class + known write-safe set {0,1,…} or safe echo write-probe), and NVS catalog cache in `firmware/main/ot_catalog.c` and `firmware/main/ot_catalog.h`
 - [ ] T010 Extend `firmware/main/ot_poll.c` / `firmware/main/ot_poll.h` with ≥1 Hz Status keepalive, 120 ms inter-frame gap, fast/slow/promoted tiers, and a serialized write slot that never drops keepalive
 - [ ] T011 Implement ESP-MQTT client with birth/`LWT` on `otc6/<device_id>/status` (`online`/`offline`) in `firmware/main/mqtt_ha.c` and `firmware/main/mqtt_ha.h`
 - [ ] T012 Wire boot sequence in `firmware/main/main.c`: load NVS → start OT poll task → connect MQTT when credentials exist (stubs OK for SoftAP/discovery/commands/fail-safe)
-- [ ] T013 [P] Add host unit tests for `ot_codec` and catalog classification fixtures in `firmware/tests/host/test_ot_codec.c` and `firmware/tests/host/test_ot_catalog.c`
+- [ ] T013 [P] Add host unit tests for `ot_codec` and catalog classification fixtures (including writable true/false cases: known-safe IDs, non-writable directory class, failed/skipped probe) in `firmware/tests/host/test_ot_codec.c` and `firmware/tests/host/test_ot_catalog.c`
 - [ ] T014 Confirm delivered image has no Zigbee/OpenThread features in `firmware/sdkconfig.defaults` and `firmware/CMakeLists.txt` (SC-006)
 
 **Checkpoint**: Foundation ready — OT keepalive runs on device; MQTT can connect with injected NVS credentials; host codec/catalog tests pass
@@ -70,11 +70,11 @@ description: "Task list for OpenTherm Wi‑Fi MQTT Gateway implementation"
 ### Tests for User Story 1
 
 - [ ] T015 [P] [US1] Add host tests for MQTT Discovery JSON shape (device block, availability, boiler-link, per-ID sensor) in `firmware/tests/host/test_mqtt_discovery.c`
-- [ ] T016 [P] [US1] Add host tests for SoftAP form validation (required fields, `ch_min_c` < `ch_max_c`) in `firmware/tests/host/test_provision_validate.c`
+- [ ] T016 [P] [US1] Add host tests for SoftAP form validation (required Wi‑Fi/MQTT host/port, optional MQTT user/password/TLS, `ch_min_c` < `ch_max_c`) in `firmware/tests/host/test_provision_validate.c`
 
 ### Implementation for User Story 1
 
-- [ ] T017 [US1] Implement SoftAP + captive-portal HTTP UI (Wi‑Fi, MQTT, CH min/max) and NVS save/exit in `firmware/main/provision_softap.c` and `firmware/main/provision_softap.h`
+- [ ] T017 [US1] Implement SoftAP + captive-portal HTTP UI per `contracts/softap-provisioning.md` (Wi‑Fi SSID/password, MQTT host/port/username/password/TLS, CH min/max) and NVS save/exit in `firmware/main/provision_softap.c` and `firmware/main/provision_softap.h`
 - [ ] T018 [US1] Implement GPIO9 ≥5 s long-press re-provision (clear Wi‑Fi/MQTT credentials, force SoftAP) in `firmware/main/provision_softap.c`
 - [ ] T019 [P] [US1] Implement boiler-link health state machine (threshold 3) publishing `otc6/<device_id>/boiler_link` in `firmware/main/mqtt_ha.c` / `firmware/main/ot_poll.c` as needed
 - [ ] T020 [US1] Implement HA MQTT Discovery publisher for meta entities + every catalog-readable Data ID in `firmware/main/mqtt_discovery.c` and `firmware/main/mqtt_discovery.h` per `contracts/mqtt-ha-discovery.md`
@@ -96,7 +96,7 @@ description: "Task list for OpenTherm Wi‑Fi MQTT Gateway implementation"
 ### Tests for User Story 2
 
 - [ ] T025 [P] [US2] Add host tests for SetpointBounds resolution and ID 1 reject-not-clamp in `firmware/tests/host/test_setpoint_bounds.c`
-- [ ] T026 [P] [US2] Add host tests for WritableCommand outcomes (`accepted`, `rejected_range`, `rejected_link`, `ot_failed`) in `firmware/tests/host/test_mqtt_commands.c`
+- [ ] T026 [P] [US2] Add host tests for WritableCommand outcomes (`accepted`, `rejected_range`, `rejected_failsafe`, `rejected_link`, `ot_failed`) in `firmware/tests/host/test_mqtt_commands.c`
 
 ### Implementation for User Story 2
 
@@ -138,11 +138,11 @@ description: "Task list for OpenTherm Wi‑Fi MQTT Gateway implementation"
 
 **Purpose**: Contract alignment, optional UX, validation pass, governance note
 
-- [ ] T040 [P] Align `specs/001-wifi-mqtt-opentherm/contracts/opentherm-master.md` GPIO table with WeAct Mini defaults (in=2 / out=3) to match plan/research
+- [x] T040 [P] Verify `specs/001-wifi-mqtt-opentherm/contracts/opentherm-master.md` GPIO table matches WeAct Mini defaults (in=2 / out=3); amend only if drift reappears
 - [ ] T041 [P] Optional additive HA `climate` convenience for ID 1 / related status in `firmware/main/mqtt_discovery.c` without removing per-ID entities (FR-002)
 - [ ] T042 [P] Add brief `firmware/README.md` with build/flash and pointer to `specs/001-wifi-mqtt-opentherm/quickstart.md`
 - [ ] T043 Run full quickstart.md host + HIL validation pass; record results under `firmware/tests/hil/results/` (or checklist sign-off)
-- [ ] T044 [P] Track constitution Zigbee→Wi‑Fi MQTT wording amend as follow-up (note only in `specs/001-wifi-mqtt-opentherm/plan.md` Complexity Tracking / Assumptions — do not implement Zigbee)
+- [x] T044 [P] Confirm constitution v2.0.0 Wi‑Fi MQTT wording matches this feature (Zigbee/Thread remain out of scope); no further constitution edit required unless drift returns
 
 ---
 
@@ -220,7 +220,7 @@ Task: "Implement SetpointBounds resolution (prefer boiler limit IDs)"
 2. US1 → monitoring MVP
 3. US2 → full write catalog + reject signal
 4. US3 → fail-safe under link loss
-5. Polish → contract GPIO fix, optional climate, quickstart sign-off
+5. Polish → contract GPIO verify, optional climate, quickstart sign-off, constitution alignment check
 
 ### Parallel Team Strategy
 

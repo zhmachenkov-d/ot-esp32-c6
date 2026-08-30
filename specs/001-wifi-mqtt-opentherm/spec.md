@@ -144,7 +144,7 @@ As a household occupant, if Wi‑Fi or the MQTT broker drops, the boiler must no
 - MQTT Discovery prefix and entity patterns follow Home Assistant’s standard expectations; operator uses a LAN broker (e.g. HA Mosquitto add-on) reachable over IPv4 Wi‑Fi.
 - TLS for MQTT is optional for a trusted LAN in v1; username/password (or equivalent) are supported when the broker requires them.
 - On reconnect, retained MQTT write messages are either ignored until a fresh post-recovery command or applied once under a documented rule—default: **apply at most one retained CH setpoint (ID 1) only after link-up debounce**, then follow live commands; retained storms for other writable IDs MUST NOT spiral unintended boiler state (refine in plan if needed).
-- Project constitution language that still frames the product as OpenTherm↔Zigbee will be amended as a governance follow-up so it matches this Wi‑Fi MQTT direction; this feature does not ship Zigbee.
+- Project constitution describes OpenTherm↔Wi‑Fi MQTT / Home Assistant Discovery as the product surface (v2.0.0+); this feature does not ship Zigbee or Thread.
 - Existing Zigbee-oriented knowledge/playbooks in the repo remain historical/reference only for this feature; they are not a delivery dependency (OpenTherm Data ID and discovery knowledge remains relevant).
 - Single boiler, single gateway; multi-boiler and multi-zone orchestration are out of scope.
 - Numeric freshness/command bounds in SC-001/SC-002 may be tightened later but are the acceptance floor for this release.
