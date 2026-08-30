@@ -246,6 +246,10 @@ static void dhcp_set_captive_portal_uri(void)
 
 esp_err_t provision_softap_start(const char *device_id)
 {
+    if (s_active) {
+        return ESP_OK;
+    }
+
     char psk[NVS_SOFTAP_PSK_MAX];
     esp_err_t err = nvs_store_ensure_softap_psk(psk, sizeof(psk));
     if (err != ESP_OK) {
@@ -263,10 +267,43 @@ esp_err_t provision_softap_start(const char *device_id)
         return ESP_ERR_INVALID_STATE;
     }
 
-    esp_netif_create_default_wifi_ap();
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
+    if (esp_netif_get_handle_from_ifkey("WIFI_AP_DEF") == NULL) {
+        esp_netif_create_default_wifi_ap();
+    }
+
+    wifi_mode_t cur_mode;
+    esp_err_t mode_err = esp_wifi_get_mode(&cur_mode);
+    bool wifi_already_init = (mode_err != ESP_ERR_WIFI_NOT_INIT);
+    /* If get_mode works, the driver has been started at least once in STA paths;
+     * stop before AP switch. Virgin SoftAP: get_mode fails with NOT_INIT. */
+    bool wifi_started = wifi_already_init;
+    provision_softap_wifi_plan_t plan;
+    provision_softap_plan_wifi(wifi_already_init, wifi_started, &plan);
+
+    if (plan.call_wifi_init) {
+        wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+        err = esp_wifi_init(&cfg);
+        /* Fresh init must succeed; already-init is handled by skipping call_wifi_init.
+         * Tolerate ESP_ERR_WIFI_INIT_STATE / ESP_OK if a race inits underneath us. */
+        if (err != ESP_OK && err != ESP_ERR_WIFI_INIT_STATE) {
+            ESP_LOGE(TAG, "esp_wifi_init: %s", esp_err_to_name(err));
+            return err;
+        }
+    }
+
+    if (plan.call_wifi_stop) {
+        err = esp_wifi_stop();
+        if (err != ESP_OK && err != ESP_ERR_WIFI_NOT_STARTED) {
+            ESP_LOGW(TAG, "esp_wifi_stop: %s", esp_err_to_name(err));
+        }
+    }
+
+    err = esp_wifi_set_mode(WIFI_MODE_AP);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "esp_wifi_set_mode(AP): %s", esp_err_to_name(err));
+        return err;
+    }
+
     wifi_config_t ap = { 0 };
     strncpy((char *)ap.ap.ssid, ap_params.ssid, sizeof(ap.ap.ssid) - 1);
     ap.ap.ssid_len = strlen(ap_params.ssid);
@@ -274,8 +311,16 @@ esp_err_t provision_softap_start(const char *device_id)
     ap.ap.channel = 1;
     ap.ap.max_connection = 4;
     ap.ap.authmode = WIFI_AUTH_WPA2_PSK;
-    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &ap));
-    ESP_ERROR_CHECK(esp_wifi_start());
+    err = esp_wifi_set_config(WIFI_IF_AP, &ap);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "esp_wifi_set_config(AP): %s", esp_err_to_name(err));
+        return err;
+    }
+    err = esp_wifi_start();
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "esp_wifi_start: %s", esp_err_to_name(err));
+        return err;
+    }
 
     dhcp_set_captive_portal_uri();
     start_httpd();

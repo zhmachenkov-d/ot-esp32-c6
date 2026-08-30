@@ -58,3 +58,14 @@ bool provision_softap_build_ap_params(const char *device_id, const char *psk,
     out->authmode = PROVISION_SOFTAP_AUTH_WPA2_PSK;
     return true;
 }
+
+void provision_softap_plan_wifi(bool wifi_already_init, bool wifi_started,
+                                provision_softap_wifi_plan_t *out)
+{
+    if (!out) {
+        return;
+    }
+    out->call_wifi_init = !wifi_already_init;
+    /* Stop whenever the driver is up so set_mode(AP) is not racing STA. */
+    out->call_wifi_stop = wifi_started;
+}

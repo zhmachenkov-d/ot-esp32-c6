@@ -66,6 +66,18 @@ typedef struct {
 bool provision_softap_build_ap_params(const char *device_id, const char *psk,
                                       provision_softap_ap_params_t *out);
 
+/**
+ * SoftAP Wi‑Fi bring-up plan when STA may already own the stack (host-testable).
+ * After STA init: skip a second esp_wifi_init and stop before AP mode switch.
+ */
+typedef struct {
+    bool call_wifi_init;
+    bool call_wifi_stop;
+} provision_softap_wifi_plan_t;
+
+void provision_softap_plan_wifi(bool wifi_already_init, bool wifi_started,
+                                provision_softap_wifi_plan_t *out);
+
 esp_err_t provision_softap_start(const char *device_id);
 void provision_softap_stop(void);
 

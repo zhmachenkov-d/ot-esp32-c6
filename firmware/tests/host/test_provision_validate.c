@@ -128,6 +128,23 @@ void test_softap_ap_params_reject_short_or_missing_psk(void)
     TEST_ASSERT_FALSE(provision_softap_build_ap_params("aabbccddeeff", "", &p));
 }
 
+void test_softap_wifi_plan_after_sta_skips_second_init(void)
+{
+    /* SoftAP after mocked STA init must not call esp_wifi_init again. */
+    provision_softap_wifi_plan_t plan;
+    provision_softap_plan_wifi(true, true, &plan);
+    TEST_ASSERT_FALSE(plan.call_wifi_init);
+    TEST_ASSERT_TRUE(plan.call_wifi_stop);
+}
+
+void test_softap_wifi_plan_virgin_calls_init(void)
+{
+    provision_softap_wifi_plan_t plan;
+    provision_softap_plan_wifi(false, false, &plan);
+    TEST_ASSERT_TRUE(plan.call_wifi_init);
+    TEST_ASSERT_FALSE(plan.call_wifi_stop);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -143,5 +160,7 @@ int main(void)
     RUN_TEST(test_boot_after_button_clears_credentials_opens_softap);
     RUN_TEST(test_softap_ap_params_wpa2_when_psk_present);
     RUN_TEST(test_softap_ap_params_reject_short_or_missing_psk);
+    RUN_TEST(test_softap_wifi_plan_after_sta_skips_second_init);
+    RUN_TEST(test_softap_wifi_plan_virgin_calls_init);
     return UNITY_END();
 }
