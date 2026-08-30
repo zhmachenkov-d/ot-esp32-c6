@@ -1,6 +1,13 @@
 # Directory Update Log
 
 ## 2026-08-30
+* **Update**: Appended flag8 bit maps (IDs 0, 2, 3, 5, 6, 100) to [OpenTherm Data IDs](/opentherm/opentherm-data-ids.md); expanded [OpenTherm Data Encoding](/opentherm/opentherm-data-encoding.md) and [Data ID 0 Status](/opentherm/data-id-0-status.md); raw `wiki/raw/opentherm/2003-02-07-opentherm-protocol-v2-2-flag-bits.md`.
+
+## 2026-08-30
+* **Creation**: Added [OpenTherm Data IDs](/opentherm/opentherm-data-ids.md) — full 0..127 catalog from Protocol v2.2 directory plus Melnyk post-v2.2 IDs (`wiki/raw/opentherm/2003-02-07-opentherm-protocol-v2-2-data-id-directory.md`, `wiki/raw/opentherm/2023-ihormelnyk-opentherm-message-ids.md`).
+* **Update**: Linked [OpenTherm Protocol](/opentherm/opentherm-protocol.md), [OpenTherm Data Encoding](/opentherm/opentherm-data-encoding.md), and [Melnyk OpenTherm Library](/opentherm/melnyk-opentherm-library.md) to the catalog.
+
+## 2026-08-30
 * **Update**: Project default board → [WeAct ESP32-C6 Mini](/zephyr/weact-esp32c6-mini.md); [OpenTherm GPIO Wiring](/bridge/opentherm-gpio-wiring.md) defaults GPIO2 in / GPIO3 out; [WeAct ESP32-C6-A](/esp32/weact-esp32-c6-a.md) no longer default.
 * **Creation**: Added [WeAct ESP32-C6 Mini (Zephyr)](/zephyr/weact-esp32c6-mini.md) from `wiki/raw/zephyr/2026-08-30-weact-esp32c6-mini.md` (Zephyr board docs).
 * **Update**: Linked [WeAct ESP32-C6-A](/esp32/weact-esp32-c6-a.md) and [ESP32](/esp32/) index to the Mini board; added [Zephyr](/zephyr/) directory.
