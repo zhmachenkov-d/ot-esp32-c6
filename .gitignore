@@ -20,7 +20,32 @@ CMakeUserPresets.json
 
 # Local secrets (copy from .env.example)
 .env
+.env.*
+!.env.example
 
 # Scratch dump from `specify extension` catalog listing
 extensions.txt
-__pycache__
+__pycache__/
+*.pyc
+
+# ESP-IDF / firmware build artifacts
+firmware/build/
+firmware/sdkconfig
+firmware/sdkconfig.old
+firmware/dependencies.lock
+firmware/managed_components/
+build/
+bin/
+obj/
+out/
+*.o
+*.a
+*.so
+*.exe
+*.dll
+*.log
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+.idea/

@@ -31,11 +31,11 @@ description: "Task list for OpenTherm Wi‑Fi MQTT Gateway implementation"
 
 **Purpose**: Greenfield ESP-IDF project skeleton and tooling so firmware and host tests can build
 
-- [ ] T001 Create ESP-IDF project skeleton under `firmware/` (`CMakeLists.txt`, `sdkconfig.defaults`, `main/CMakeLists.txt`, empty `main/main.c`) per plan.md
-- [ ] T002 [P] Add IDF Component Manager deps in `firmware/idf_component.yml` for `sazanof/opentherm` (^1.0.3+) and `espressif/mqtt`
-- [ ] T003 [P] Create compile-time defaults in `firmware/main/app_config.h` (GPIO in=2 / out=3, SoftAP button GPIO9 ≥5 s, CH min/max 10.0/90.0, DHW/MaxTSet fallbacks for ID 56/57 when ID 48/49 absent, ID 7/14 **0..100**, boiler-link failure threshold 3, **fail-safe entry timer 10 000 ms**, **link-up debounce 2000 ms**, topic root `otc6/`)
-- [ ] T004 [P] Scaffold host test harness under `firmware/tests/host/` (CMake/`idf.py` host-test entry for **Unity** suites)
-- [ ] T005 [P] Add HIL scenario stubs in `firmware/tests/hil/` that mirror quickstart.md V1–V9 checklists
+- [X] T001 Create ESP-IDF project skeleton under `firmware/` (`CMakeLists.txt`, `sdkconfig.defaults`, `main/CMakeLists.txt`, empty `main/main.c`) per plan.md
+- [X] T002 [P] Add IDF Component Manager deps in `firmware/idf_component.yml` for `sazanof/opentherm` (^1.0.3+) and `espressif/mqtt`
+- [X] T003 [P] Create compile-time defaults in `firmware/main/app_config.h` (GPIO in=2 / out=3, SoftAP button GPIO9 ≥5 s, CH min/max 10.0/90.0, DHW/MaxTSet fallbacks for ID 56/57 when ID 48/49 absent, ID 7/14 **0..100**, boiler-link failure threshold 3, **fail-safe entry timer 10 000 ms**, **link-up debounce 2000 ms**, topic root `otc6/`)
+- [X] T004 [P] Scaffold host test harness under `firmware/tests/host/` (CMake/`idf.py` host-test entry for **Unity** suites)
+- [X] T005 [P] Add HIL scenario stubs in `firmware/tests/hil/` that mirror quickstart.md V1–V9 checklists
 
 **Checkpoint**: `idf.py set-target esp32c6` and empty app build succeed; host harness is invokable
 
@@ -47,17 +47,17 @@ description: "Task list for OpenTherm Wi‑Fi MQTT Gateway implementation"
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T006 Implement NVS persistence for credentials, SoftAP CH bounds, device identity, catalog blob, and **last-accepted CH setpoint** (`last_accepted_ch_setpoint_c` per data-model) in `firmware/main/nvs_store.c` and `firmware/main/nvs_store.h`
-- [ ] T007 [P] Implement OpenTherm f8.8 / typed encode-decode helpers used by poll and MQTT in `firmware/main/ot_codec.c` and `firmware/main/ot_codec.h`
-- [ ] T008 Bring up `sazanof/opentherm` as master on GPIO2/3 with documented adapter assumptions in `firmware/main/ot_poll.c` and `firmware/main/ot_poll.h` (init + single exchange API); **C6 validation gate**: confirm framing/IRQ on WeAct Mini. If validation **passes**, mark T008 done and skip T008b. If it **fails**, do **not** treat OT bring-up as done—execute T008b before T009+
-- [ ] T008b **[Conditional — only if T008 C6 validation fails]** Port Melnyk OpenTherm master timing onto ESP-IDF GPIO + `esp_timer` (pins in=2 / out=3; no Arduino core) behind the same `ot_poll` exchange API in `firmware/main/ot_poll.c` / `firmware/main/ot_poll.h`; document the chosen stack in `firmware/README.md` (or a short note under `firmware/main/`); re-run the C6 framing check before continuing Phase 2
-- [ ] T009 Implement Data ID 0–127 discovery/classification (READ-ACK / DATA-INVALID → available; UNKNOWN-DATAID → unsupported), **writable flags per research §3 / data-model** (directory write-class + known write-safe set **0, 1, plus IDs listed under `firmware/tests/host/fixtures/`**, or safe echo write-probe; **ID 0 writable = master Status flags via Status READ exchange, never WRITE-DATA(id=0)**), and NVS catalog cache in `firmware/main/ot_catalog.c` and `firmware/main/ot_catalog.h`
-- [ ] T009b [P] Add host fixtures under `firmware/tests/host/fixtures/` covering OpenTherm mandatory Data IDs **0, 1, 3, 14, 17, 25** (read classification; writable only where directory/write-safe rules allow) plus any bound/write-safe override lists referenced by SetpointBounds
-- [ ] T010 Extend `firmware/main/ot_poll.c` / `firmware/main/ot_poll.h` with ≥1 Hz Status keepalive, 120 ms inter-frame gap, fast/slow/promoted tiers, and a serialized write slot that never drops keepalive
-- [ ] T011 Implement ESP-MQTT client with birth/`LWT` on `otc6/<device_id>/status` (`online`/`offline`) in `firmware/main/mqtt_ha.c` and `firmware/main/mqtt_ha.h`; honor NVS `mqtt_tls` (TLS when true; plain TCP when false/default) using broker host/port/username/password from NVS; expose APIs to publish retained birth `online` / force `offline` (and reconnect birth policy). **Ownership (Option A)**: T011 owns birth/LWT plumbing and publish helpers only—**do not** implement the fail-safe entry timer here (that is T035); T038 calls these helpers for timer-running=`online` / active=`offline`
-- [ ] T012 Wire boot sequence in `firmware/main/main.c`: load NVS → start OT poll task → connect MQTT when credentials exist (stubs OK for SoftAP/discovery/commands/fail-safe)
-- [ ] T013 [P] Add host unit tests for `ot_codec` and catalog classification fixtures (including writable true/false cases: known-safe IDs, non-writable directory class, failed/skipped probe; load from `firmware/tests/host/fixtures/`) in `firmware/tests/host/test_ot_codec.c` and `firmware/tests/host/test_ot_catalog.c`
-- [ ] T014 Confirm delivered image has no Zigbee/OpenThread features in `firmware/sdkconfig.defaults` and `firmware/CMakeLists.txt` (SC-006)
+- [X] T006 Implement NVS persistence for credentials, SoftAP CH bounds, device identity, catalog blob, and **last-accepted CH setpoint** (`last_accepted_ch_setpoint_c` per data-model) in `firmware/main/nvs_store.c` and `firmware/main/nvs_store.h`
+- [X] T007 [P] Implement OpenTherm f8.8 / typed encode-decode helpers used by poll and MQTT in `firmware/main/ot_codec.c` and `firmware/main/ot_codec.h`
+- [X] T008 Bring up `sazanof/opentherm` as master on GPIO2/3 with documented adapter assumptions in `firmware/main/ot_poll.c` and `firmware/main/ot_poll.h` (init + single exchange API); **C6 validation gate**: confirm framing/IRQ on WeAct Mini. If validation **passes**, mark T008 done and skip T008b. If it **fails**, do **not** treat OT bring-up as done—execute T008b before T009+
+- [X] T008b **[Conditional — only if T008 C6 validation fails]** Port Melnyk OpenTherm master timing onto ESP-IDF GPIO + `esp_timer` (pins in=2 / out=3; no Arduino core) behind the same `ot_poll` exchange API in `firmware/main/ot_poll.c` / `firmware/main/ot_poll.h`; document the chosen stack in `firmware/README.md` (or a short note under `firmware/main/`); re-run the C6 framing check before continuing Phase 2
+- [X] T009 Implement Data ID 0–127 discovery/classification (READ-ACK / DATA-INVALID → available; UNKNOWN-DATAID → unsupported), **writable flags per research §3 / data-model** (directory write-class + known write-safe set **0, 1, plus IDs listed under `firmware/tests/host/fixtures/`**, or safe echo write-probe; **ID 0 writable = master Status flags via Status READ exchange, never WRITE-DATA(id=0)**), and NVS catalog cache in `firmware/main/ot_catalog.c` and `firmware/main/ot_catalog.h`
+- [X] T009b [P] Add host fixtures under `firmware/tests/host/fixtures/` covering OpenTherm mandatory Data IDs **0, 1, 3, 14, 17, 25** (read classification; writable only where directory/write-safe rules allow) plus any bound/write-safe override lists referenced by SetpointBounds
+- [X] T010 Extend `firmware/main/ot_poll.c` / `firmware/main/ot_poll.h` with ≥1 Hz Status keepalive, 120 ms inter-frame gap, fast/slow/promoted tiers, and a serialized write slot that never drops keepalive
+- [X] T011 Implement ESP-MQTT client with birth/`LWT` on `otc6/<device_id>/status` (`online`/`offline`) in `firmware/main/mqtt_ha.c` and `firmware/main/mqtt_ha.h`; honor NVS `mqtt_tls` (TLS when true; plain TCP when false/default) using broker host/port/username/password from NVS; expose APIs to publish retained birth `online` / force `offline` (and reconnect birth policy). **Ownership (Option A)**: T011 owns birth/LWT plumbing and publish helpers only—**do not** implement the fail-safe entry timer here (that is T035); T038 calls these helpers for timer-running=`online` / active=`offline`
+- [X] T012 Wire boot sequence in `firmware/main/main.c`: load NVS → start OT poll task → connect MQTT when credentials exist (stubs OK for SoftAP/discovery/commands/fail-safe)
+- [X] T013 [P] Add host unit tests for `ot_codec` and catalog classification fixtures (including writable true/false cases: known-safe IDs, non-writable directory class, failed/skipped probe; load from `firmware/tests/host/fixtures/`) in `firmware/tests/host/test_ot_codec.c` and `firmware/tests/host/test_ot_catalog.c`
+- [X] T014 Confirm delivered image has no Zigbee/OpenThread features in `firmware/sdkconfig.defaults` and `firmware/CMakeLists.txt` (SC-006)
 
 **Checkpoint**: Foundation ready — OT keepalive runs on device (C6 framing validated on `sazanof/opentherm`, or Melnyk-port T008b completed); MQTT can connect with injected NVS credentials; host codec/catalog tests pass
 
@@ -71,22 +71,22 @@ description: "Task list for OpenTherm Wi‑Fi MQTT Gateway implementation"
 
 ### Tests for User Story 1
 
-- [ ] T015 [P] [US1] Add host tests for MQTT Discovery JSON shape (device block, availability, boiler-link, per-ID sensor) in `firmware/tests/host/test_mqtt_discovery.c`
-- [ ] T015b [P] [US1] Add host tests for Data ID 0 Status flag additive discovery/state projections (`binary_sensor` / `switch` for **fault, CH active, DHW active, flame, CH enable** only; ID 0 entity still present) in `firmware/tests/host/test_status_projections.c` (fixtures under `firmware/tests/host/fixtures/` aligned with `knowledge/opentherm/data-id-0-status.md`)
-- [ ] T016 [P] [US1] Add host tests for SoftAP form validation (required Wi‑Fi/MQTT host/port, optional MQTT user/password/TLS, `ch_min_c` < `ch_max_c`) in `firmware/tests/host/test_provision_validate.c`
+- [X] T015 [P] [US1] Add host tests for MQTT Discovery JSON shape (device block, availability, boiler-link, per-ID sensor) in `firmware/tests/host/test_mqtt_discovery.c`
+- [X] T015b [P] [US1] Add host tests for Data ID 0 Status flag additive discovery/state projections (`binary_sensor` / `switch` for **fault, CH active, DHW active, flame, CH enable** only; ID 0 entity still present) in `firmware/tests/host/test_status_projections.c` (fixtures under `firmware/tests/host/fixtures/` aligned with `knowledge/opentherm/data-id-0-status.md`)
+- [X] T016 [P] [US1] Add host tests for SoftAP form validation (required Wi‑Fi/MQTT host/port, optional MQTT user/password/TLS, `ch_min_c` < `ch_max_c`) in `firmware/tests/host/test_provision_validate.c`
 
 ### Implementation for User Story 1
 
-- [ ] T017 [US1] Implement SoftAP + captive-portal HTTP UI per `contracts/softap-provisioning.md` (**open** SoftAP; Wi‑Fi SSID/password, MQTT host/port/username/password/TLS, CH min/max) and NVS save/exit in `firmware/main/provision_softap.c` and `firmware/main/provision_softap.h`
-- [ ] T018 [US1] Implement GPIO9 ≥5 s long-press re-provision (clear Wi‑Fi/MQTT credentials, force SoftAP) in `firmware/main/provision_softap.c`
-- [ ] T019 [P] [US1] Implement boiler-link health state machine (unhealthy after 3 consecutive **keepalive/status** failures only; **healthy after one successful** keepalive/status exchange; tiered catalog reads do not count) publishing `otc6/<device_id>/boiler_link` in `firmware/main/mqtt_ha.c` / `firmware/main/ot_poll.c` as needed
-- [ ] T020 [US1] Implement HA MQTT Discovery publisher for meta entities + every catalog-readable Data ID in `firmware/main/mqtt_discovery.c` and `firmware/main/mqtt_discovery.h` per `contracts/mqtt-ha-discovery.md` (no custom HA Core integration — FR-009)
-- [ ] T021 [US1] Publish retained/live readable Data ID state on `otc6/<device_id>/ot/<N>/state` from poll results in `firmware/main/mqtt_discovery.c` (or thin glue in `firmware/main/mqtt_ha.c`) meeting SC-001; use **empty-string** state when no valid sample (contracts unavailable sentinels)
-- [ ] T021b [US1] When Data ID 0 is catalog-available, publish additive HA `binary_sensor` (and writable `switch` for master **CH enable**) projections for Status flag8 bits **fault, CH active, DHW active, flame** (slave) and **CH enable** (master) **without** removing the underlying ID 0 entity, in `firmware/main/mqtt_discovery.c` per FR-002 / data-model Encoding notes / `knowledge/opentherm/data-id-0-status.md` (depends on T020/T021 discovery + state paths in the same files—not parallel)
-- [ ] T022 [US1] On MQTT reconnect / catalog validation, re-publish discovery configs so HA recovers entities without manual YAML in `firmware/main/mqtt_discovery.c`
-- [ ] T023 [US1] Integrate SoftAP → STA → MQTT → catalog validate → discovery into `firmware/main/main.c` end-to-end path; after first successful OT+MQTT link, run `idf.py size` (or equivalent) and note app `.bin` vs soft budgets (≤1.5 MiB / warn if >1.2 MiB) so size regressions surface before polish T043
-- [ ] T024 [US1] Document SoftAP SSID `OTC6-XXXX` and commissioning steps against quickstart V1 in `firmware/tests/hil/v1_commissioning.md`
-- [ ] T024b [P] [US1] Add HIL steps for boiler-link vs MQTT availability (quickstart V8) in `firmware/tests/hil/v8_boiler_link.md`
+- [X] T017 [US1] Implement SoftAP + captive-portal HTTP UI per `contracts/softap-provisioning.md` (**open** SoftAP; Wi‑Fi SSID/password, MQTT host/port/username/password/TLS, CH min/max) and NVS save/exit in `firmware/main/provision_softap.c` and `firmware/main/provision_softap.h`
+- [X] T018 [US1] Implement GPIO9 ≥5 s long-press re-provision (clear Wi‑Fi/MQTT credentials, force SoftAP) in `firmware/main/provision_softap.c`
+- [X] T019 [P] [US1] Implement boiler-link health state machine (unhealthy after 3 consecutive **keepalive/status** failures only; **healthy after one successful** keepalive/status exchange; tiered catalog reads do not count) publishing `otc6/<device_id>/boiler_link` in `firmware/main/mqtt_ha.c` / `firmware/main/ot_poll.c` as needed
+- [X] T020 [US1] Implement HA MQTT Discovery publisher for meta entities + every catalog-readable Data ID in `firmware/main/mqtt_discovery.c` and `firmware/main/mqtt_discovery.h` per `contracts/mqtt-ha-discovery.md` (no custom HA Core integration — FR-009)
+- [X] T021 [US1] Publish retained/live readable Data ID state on `otc6/<device_id>/ot/<N>/state` from poll results in `firmware/main/mqtt_discovery.c` (or thin glue in `firmware/main/mqtt_ha.c`) meeting SC-001; use **empty-string** state when no valid sample (contracts unavailable sentinels)
+- [X] T021b [US1] When Data ID 0 is catalog-available, publish additive HA `binary_sensor` (and writable `switch` for master **CH enable**) projections for Status flag8 bits **fault, CH active, DHW active, flame** (slave) and **CH enable** (master) **without** removing the underlying ID 0 entity, in `firmware/main/mqtt_discovery.c` per FR-002 / data-model Encoding notes / `knowledge/opentherm/data-id-0-status.md` (depends on T020/T021 discovery + state paths in the same files—not parallel)
+- [X] T022 [US1] On MQTT reconnect / catalog validation, re-publish discovery configs so HA recovers entities without manual YAML in `firmware/main/mqtt_discovery.c`
+- [X] T023 [US1] Integrate SoftAP → STA → MQTT → catalog validate → discovery into `firmware/main/main.c` end-to-end path; after first successful OT+MQTT link, run `idf.py size` (or equivalent) and note app `.bin` vs soft budgets (≤1.5 MiB / warn if >1.2 MiB) so size regressions surface before polish T043
+- [X] T024 [US1] Document SoftAP SSID `OTC6-XXXX` and commissioning steps against quickstart V1 in `firmware/tests/hil/v1_commissioning.md`
+- [X] T024b [P] [US1] Add HIL steps for boiler-link vs MQTT availability (quickstart V8) in `firmware/tests/hil/v8_boiler_link.md`
 
 **Checkpoint**: User Story 1 independently demonstrable — SoftAP commission yields full readable catalog in HA
 
@@ -100,18 +100,18 @@ description: "Task list for OpenTherm Wi‑Fi MQTT Gateway implementation"
 
 ### Tests for User Story 2
 
-- [ ] T025 [P] [US2] Add host tests for SetpointBounds / range resolution and reject-not-clamp for v1 range-checked IDs (**1, 8** if available, **7, 14, 56, 57**) in `firmware/tests/host/test_setpoint_bounds.c`
-- [ ] T026 [P] [US2] Add host tests for WritableCommand outcomes (`accepted`, `rejected_range`, `rejected_failsafe`, `ot_failed`) including **outcome→wire `reason` mapping** (`rejected_range`→`out_of_range`; `rejected_failsafe`/`ot_failed` unchanged), **boiler-link unhealthy still attempts write** (success→`accepted` / fail→`ot_failed` + `ot/<N>/rejection`, never a link pre-reject; writes do not clear BoilerLink counters), and **rejection topic for every writable N** in `firmware/tests/host/test_mqtt_commands.c`
+- [X] T025 [P] [US2] Add host tests for SetpointBounds / range resolution and reject-not-clamp for v1 range-checked IDs (**1, 8** if available, **7, 14, 56, 57**) in `firmware/tests/host/test_setpoint_bounds.c`
+- [X] T026 [P] [US2] Add host tests for WritableCommand outcomes (`accepted`, `rejected_range`, `rejected_failsafe`, `ot_failed`) including **outcome→wire `reason` mapping** (`rejected_range`→`out_of_range`; `rejected_failsafe`/`ot_failed` unchanged), **boiler-link unhealthy still attempts write** (success→`accepted` / fail→`ot_failed` + `ot/<N>/rejection`, never a link pre-reject; writes do not clear BoilerLink counters), and **rejection topic for every writable N** in `firmware/tests/host/test_mqtt_commands.c`
 
 ### Implementation for User Story 2
 
-- [ ] T027 [P] [US2] Implement effective bounds for v1 range-checked IDs in `firmware/main/ot_catalog.c` / `firmware/main/ot_catalog.h` (owner module; `mqtt_commands` consumes the API): ID **1**/**8** via `SetpointBounds` (prefer boiler max-limit ID e.g. 57 for max; **v1 min = SoftAP/NVS** unless fixture min-limit); ID **56**←ID 48; ID **57**←ID 49; ID **7**/**14**←0..100 unless fixture override
-- [ ] T028 [US2] Implement MQTT command subscriptions for every catalog-writable ID and enqueue serialized OT writes in `firmware/main/mqtt_commands.c` and `firmware/main/mqtt_commands.h`
-- [ ] T029 [US2] Publish Discovery for writable controls (`number` / `switch` / etc.) including command topics in `firmware/main/mqtt_discovery.c`
-- [ ] T030 [US2] Implement per-ID rejection path in `firmware/main/mqtt_commands.c`: on any non-success outcome publish JSON on `otc6/<device_id>/ot/<N>/rejection` per `contracts/mqtt-ha-discovery.md` — map `rejected_range`→`reason=out_of_range`, `rejected_failsafe`→`rejected_failsafe`, `ot_failed`→`ot_failed` (range-checked out-of-range keeps last accepted reflected state; **same topic pattern for every writable N** — FR-004/013); optional HA `event`/diagnostic discovery MAY be added later without replacing the topic
-- [ ] T031 [US2] Implement Status (ID 0) CH-enable command path when supported: update pending master Status flags and apply on next Status **`READ-DATA(id=0)`** exchange (not only zeroing setpoint; **never** `WRITE-DATA(id=0)`) in `firmware/main/mqtt_commands.c` / `firmware/main/ot_poll.c`
-- [ ] T032 [US2] Reflect write success to HA state within SC-002; on failure publish `ot/<N>/rejection` and leave reflected state unchanged (no false success) in `firmware/main/mqtt_commands.c`
-- [ ] T033 [US2] Ensure bursty HA writes cannot starve ≥1 Hz keepalive (command queue + poll budget) in `firmware/main/ot_poll.c` and verify via `firmware/tests/hil/v6_keepalive_under_load.md`
+- [X] T027 [P] [US2] Implement effective bounds for v1 range-checked IDs in `firmware/main/ot_catalog.c` / `firmware/main/ot_catalog.h` (owner module; `mqtt_commands` consumes the API): ID **1**/**8** via `SetpointBounds` (prefer boiler max-limit ID e.g. 57 for max; **v1 min = SoftAP/NVS** unless fixture min-limit); ID **56**←ID 48; ID **57**←ID 49; ID **7**/**14**←0..100 unless fixture override
+- [X] T028 [US2] Implement MQTT command subscriptions for every catalog-writable ID and enqueue serialized OT writes in `firmware/main/mqtt_commands.c` and `firmware/main/mqtt_commands.h`
+- [X] T029 [US2] Publish Discovery for writable controls (`number` / `switch` / etc.) including command topics in `firmware/main/mqtt_discovery.c`
+- [X] T030 [US2] Implement per-ID rejection path in `firmware/main/mqtt_commands.c`: on any non-success outcome publish JSON on `otc6/<device_id>/ot/<N>/rejection` per `contracts/mqtt-ha-discovery.md` — map `rejected_range`→`reason=out_of_range`, `rejected_failsafe`→`rejected_failsafe`, `ot_failed`→`ot_failed` (range-checked out-of-range keeps last accepted reflected state; **same topic pattern for every writable N** — FR-004/013); optional HA `event`/diagnostic discovery MAY be added later without replacing the topic
+- [X] T031 [US2] Implement Status (ID 0) CH-enable command path when supported: update pending master Status flags and apply on next Status **`READ-DATA(id=0)`** exchange (not only zeroing setpoint; **never** `WRITE-DATA(id=0)`) in `firmware/main/mqtt_commands.c` / `firmware/main/ot_poll.c`
+- [X] T032 [US2] Reflect write success to HA state within SC-002; on failure publish `ot/<N>/rejection` and leave reflected state unchanged (no false success) in `firmware/main/mqtt_commands.c`
+- [X] T033 [US2] Ensure bursty HA writes cannot starve ≥1 Hz keepalive (command queue + poll budget) in `firmware/main/ot_poll.c` and verify via `firmware/tests/hil/v6_keepalive_under_load.md`
 
 **Checkpoint**: User Stories 1 and 2 both work — full read/write catalog with reject diagnostics
 
@@ -125,15 +125,15 @@ description: "Task list for OpenTherm Wi‑Fi MQTT Gateway implementation"
 
 ### Tests for User Story 3
 
-- [ ] T034 [P] [US3] Add host tests for fail-safe FSM transitions, write refusal, and **Option A availability**: entry timer running → treat app availability as `online` / writes allowed; `active` → present as `offline` (helper called or LWT/birth policy stub) + `remote_writes_allowed=false` in `firmware/tests/host/test_failsafe.c`
+- [X] T034 [P] [US3] Add host tests for fail-safe FSM transitions, write refusal, and **Option A availability**: entry timer running → treat app availability as `online` / writes allowed; `active` → present as `offline` (helper called or LWT/birth policy stub) + `remote_writes_allowed=false` in `firmware/tests/host/test_failsafe.c`
 
 ### Implementation for User Story 3
 
-- [ ] T035 [US3] Implement fail-safe detection in `firmware/main/failsafe.c` and `firmware/main/failsafe.h`: Wi‑Fi STA disconnect / lost-IP **or** MQTT disconnect/client error starts the **10 000 ms** entry timer from `app_config.h`; enter fail-safe when the timer expires while link still down (SC-004); clear/cancel the timer on Wi‑Fi+MQTT healthy again; **remote writes remain allowed until fail-safe becomes active**. **Ownership (Option A)**: T035 owns the entry timer and `active` / `remote_writes_allowed` state only—call T011 publish helpers from T038 for availability (FR-006)
-- [ ] T036 [US3] While fail-safe active: continue OT keepalive/polling, hold last accepted CH setpoint on the wire, set `remote_writes_allowed=false` in `firmware/main/failsafe.c` integrated with `firmware/main/ot_poll.c` and `firmware/main/mqtt_commands.c`
-- [ ] T037 [US3] On link recovery: wait **2 s** continuous Wi‑Fi+MQTT healthy (link-up debounce from `app_config.h`), apply at most one retained ID 1 if present, ignore retained storms for other writables, then accept live commands in `firmware/main/failsafe.c` / `firmware/main/mqtt_commands.c`
-- [ ] T038 [US3] Wire fail-safe into `firmware/main/main.c`: on T035 transitions call T011 helpers so **active** → application MQTT presents as **`offline`** (retained publish when possible; LWT + next-connect birth `offline` when publish path already dead) and **entry timer running** → keep/publish **`online`** (Option A)—not `online` with silent write drops; no invented heat demand; command refusals publish `ot/<N>/rejection` with `reason=rejected_failsafe`
-- [ ] T039 [US3] Add HIL steps for fail-safe and recovery in `firmware/tests/hil/v7_failsafe.md`
+- [X] T035 [US3] Implement fail-safe detection in `firmware/main/failsafe.c` and `firmware/main/failsafe.h`: Wi‑Fi STA disconnect / lost-IP **or** MQTT disconnect/client error starts the **10 000 ms** entry timer from `app_config.h`; enter fail-safe when the timer expires while link still down (SC-004); clear/cancel the timer on Wi‑Fi+MQTT healthy again; **remote writes remain allowed until fail-safe becomes active**. **Ownership (Option A)**: T035 owns the entry timer and `active` / `remote_writes_allowed` state only—call T011 publish helpers from T038 for availability (FR-006)
+- [X] T036 [US3] While fail-safe active: continue OT keepalive/polling, hold last accepted CH setpoint on the wire, set `remote_writes_allowed=false` in `firmware/main/failsafe.c` integrated with `firmware/main/ot_poll.c` and `firmware/main/mqtt_commands.c`
+- [X] T037 [US3] On link recovery: wait **2 s** continuous Wi‑Fi+MQTT healthy (link-up debounce from `app_config.h`), apply at most one retained ID 1 if present, ignore retained storms for other writables, then accept live commands in `firmware/main/failsafe.c` / `firmware/main/mqtt_commands.c`
+- [X] T038 [US3] Wire fail-safe into `firmware/main/main.c`: on T035 transitions call T011 helpers so **active** → application MQTT presents as **`offline`** (retained publish when possible; LWT + next-connect birth `offline` when publish path already dead) and **entry timer running** → keep/publish **`online`** (Option A)—not `online` with silent write drops; no invented heat demand; command refusals publish `ot/<N>/rejection` with `reason=rejected_failsafe`
+- [X] T039 [US3] Add HIL steps for fail-safe and recovery in `firmware/tests/hil/v7_failsafe.md`
 
 **Checkpoint**: All three user stories independently functional
 
@@ -144,9 +144,9 @@ description: "Task list for OpenTherm Wi‑Fi MQTT Gateway implementation"
 **Purpose**: Contract alignment, optional UX, validation pass, governance note
 
 - [x] T040 [P] **(Documentation gate — complete pre-firmware; not a feature-done signal)** Verify `specs/001-wifi-mqtt-opentherm/contracts/opentherm-master.md` GPIO table matches WeAct Mini defaults (in=2 / out=3); amend only if drift reappears
-- [ ] T041 [P] Optional additive HA `climate` convenience for ID 1 / related status in `firmware/main/mqtt_discovery.c` without removing per-ID entities (FR-002)
-- [ ] T042 [P] Add brief `firmware/README.md` with build/flash and pointer to `specs/001-wifi-mqtt-opentherm/quickstart.md`
-- [ ] T043 Run full quickstart.md host + HIL validation pass (V1–V9 including V8); record results under `firmware/tests/hil/results/` (or checklist sign-off); include `idf.py size` (or equivalent) and confirm soft budgets: app `.bin` ≤ 1.5 MiB, free heap after OT+MQTT ≥ 64 KiB (plan Constraints)
+- [X] T041 [P] Optional additive HA `climate` convenience for ID 1 / related status in `firmware/main/mqtt_discovery.c` without removing per-ID entities (FR-002)
+- [X] T042 [P] Add brief `firmware/README.md` with build/flash and pointer to `specs/001-wifi-mqtt-opentherm/quickstart.md`
+- [X] T043 Run full quickstart.md host + HIL validation pass (V1–V9 including V8); record results under `firmware/tests/hil/results/` (or checklist sign-off); include `idf.py size` (or equivalent) and confirm soft budgets: app `.bin` ≤ 1.5 MiB, free heap after OT+MQTT ≥ 64 KiB (plan Constraints)
 - [x] T044 [P] **(Documentation gate — complete pre-firmware; not a feature-done signal)** Confirm constitution v2.0.0 Wi‑Fi MQTT wording matches this feature (Zigbee/Thread remain out of scope); no further constitution edit required unless drift returns
 
 ---

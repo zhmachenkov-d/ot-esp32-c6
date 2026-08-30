@@ -1,0 +1,10 @@
+## Project-level mirror of main/idf_component.yml (T002)
+## ESP-IDF resolves dependencies from main/idf_component.yml;
+## this file documents the same pins for Spec Kit path conventions.
+dependencies:
+  idf:
+    version: ">=5.4.0"
+  sazanof/opentherm:
+    version: "^1.0.3"
+  espressif/mqtt:
+    version: "^1.0.0"

@@ -1,0 +1,27 @@
+idf_component_register(
+    SRCS
+        "main.c"
+        "nvs_store.c"
+        "ot_codec.c"
+        "ot_poll.c"
+        "ot_catalog.c"
+        "mqtt_ha.c"
+        "mqtt_discovery.c"
+        "mqtt_commands.c"
+        "failsafe.c"
+        "provision_softap.c"
+    INCLUDE_DIRS "."
+    REQUIRES
+        nvs_flash
+        esp_wifi
+        esp_event
+        esp_netif
+        esp_http_server
+        mqtt
+        json
+        driver
+        esp_timer
+        opentherm
+        dns_server
+        mbedtls
+)

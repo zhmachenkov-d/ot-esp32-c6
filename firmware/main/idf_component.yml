@@ -1,0 +1,8 @@
+## IDF Component Manager dependencies (T002)
+dependencies:
+  idf:
+    version: ">=5.4.0"
+  sazanof/opentherm:
+    version: "^1.0.3"
+  espressif/mqtt:
+    version: "^1.0.0"

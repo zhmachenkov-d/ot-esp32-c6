@@ -1,0 +1,30 @@
+# Target: WeAct ESP32-C6 Mini — Wi‑Fi MQTT only (no Zigbee / OpenThread)
+CONFIG_IDF_TARGET="esp32c6"
+
+# FreeRTOS
+CONFIG_FREERTOS_HZ=1000
+
+# Wi‑Fi / LWIP
+CONFIG_ESP_WIFI_SOFTAP_SUPPORT=y
+CONFIG_LWIP_MAX_SOCKETS=16
+
+# SoftAP captive portal: browsers send large Cookie/UA headers (default 512 → 431)
+CONFIG_HTTPD_MAX_REQ_HDR_LEN=2048
+CONFIG_HTTPD_MAX_URI_LEN=1024
+
+# NVS
+CONFIG_NVS_ENCRYPTION=n
+
+# Explicitly disable Thread in delivered image (SC-006 / FR-007/008)
+# CONFIG_OPENTHREAD_ENABLED is not set
+
+# Logging
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+
+# Flash: WeAct ESP32-C6FH4 is 4 MiB
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+
+# Larger factory app partition (soft budget ≤1.5 MiB)
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+CONFIG_PARTITION_TABLE_FILENAME="partitions.csv"
