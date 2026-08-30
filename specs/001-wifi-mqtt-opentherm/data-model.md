@@ -96,7 +96,7 @@ One OpenTherm Data ID classified for this boiler.
 
 ### SetpointBounds
 
-Effective CH Control setpoint (ID 1) limits.
+Effective limits for **CH Control setpoint (ID 1)** and **CH2 control setpoint (ID 8)** when that ID is catalog-available.
 
 | Field | Type | Notes |
 |-------|------|-------|
@@ -105,7 +105,17 @@ Effective CH Control setpoint (ID 1) limits.
 | `source_min` | enum | `boiler` \| `config` (expect `config` unless fixture override) |
 | `source_max` | enum | `boiler` \| `config` |
 
-**Validation**: Commands with `value < min_c` or `value > max_c` → **Reject** (no OT write).
+**Validation**: ID 1 / ID 8 commands with `value < min_c` or `value > max_c` → **Reject** (no OT write).
+
+**Other v1 range-checked IDs** (same reject-not-clamp pattern; bounds not via SoftAP CH fields unless noted):
+
+| Data ID | Bounds source (prefer left → right) |
+|---------|-------------------------------------|
+| 56 (TdhwSet) | Slave ID 48 UB/LB → `app_config` / fixture defaults |
+| 57 (MaxTSet) | Slave ID 49 UB/LB → `app_config` / fixture defaults |
+| 7 (Cooling-control), 14 (Max-rel-mod) | **0..100** unless fixture override |
+
+v1 range-checked writable set: **1, 8** (8 iff catalog-available), **7, 14, 56, 57**.
 
 ---
 
@@ -123,7 +133,7 @@ Inbound HA → gateway write intent.
 **Rules**:
 - If `failsafe` active (`remote_writes_allowed=false`): outcome `rejected_failsafe`; no OT write; publish `ot/<N>/rejection` with `reason=rejected_failsafe`; no false success
 - Boiler-link `unhealthy` does **not** pre-reject: still attempt the OT write (after range/fail-safe checks); on exchange failure → `ot_failed` + `ot/<N>/rejection`; on success → `accepted`. Non-keepalive writes MUST NOT increment or clear `BoilerLink.consecutive_failures` or flip `healthy`/`unhealthy` (only keepalive/status exchanges do)
-- ID 1: range check against `SetpointBounds` before OT write → `outcome=rejected_range` and publish `ot/1/rejection` with `reason=out_of_range` if out of bounds
+- **v1 range-checked** IDs (**1, 8** if available, **7, 14, 56, 57**): range check against resolved bounds before OT write → `outcome=rejected_range` and publish `ot/<N>/rejection` with `reason=out_of_range` if out of bounds (ID 1/8 use `SetpointBounds`; others per SetpointBounds section table)
 - Serialize onto OT bus; must not starve keepalive
 - Non-success outcomes MUST publish on `otc6/<device_id>/ot/<N>/rejection` (same pattern for every writable N): map `rejected_range`→wire `reason=out_of_range`; `rejected_failsafe`→`rejected_failsafe`; `ot_failed`→`ot_failed`
 
@@ -157,7 +167,7 @@ Explicit operator-visible rejection/failure (FR-004 / FR-013).
 
 **Transitions**:
 - Link loss (Wi‑Fi STA disconnect/lost-IP or MQTT disconnect/error) starts entry timer (`entry_timer_ms`, default **10 000**); on expiry while still down → `active` (SC-004); cancel timer if Wi‑Fi+MQTT recover before expiry; **remote writes allowed until `active`**; **application availability stays `online` during the timer (Option A)**
-- While `active`: application MQTT availability is `offline` (retained publish + LWT); `remote_writes_allowed=false`
+- While `active`: application MQTT availability presents as `offline` (retained publish when possible; else LWT + next-connect birth `offline`); `remote_writes_allowed=false`
 - Link recovery: Wi‑Fi+MQTT healthy continuously for **2 s** (link-up debounce) → inactive; optional single retained ID 1 apply; then accept live writes
 
 ---

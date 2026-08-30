@@ -33,7 +33,7 @@ description: "Task list for OpenTherm Wi‑Fi MQTT Gateway implementation"
 
 - [ ] T001 Create ESP-IDF project skeleton under `firmware/` (`CMakeLists.txt`, `sdkconfig.defaults`, `main/CMakeLists.txt`, empty `main/main.c`) per plan.md
 - [ ] T002 [P] Add IDF Component Manager deps in `firmware/idf_component.yml` for `sazanof/opentherm` (^1.0.3+) and `espressif/mqtt`
-- [ ] T003 [P] Create compile-time defaults in `firmware/main/app_config.h` (GPIO in=2 / out=3, SoftAP button GPIO9 ≥5 s, CH min/max 10.0/90.0, boiler-link failure threshold 3, **fail-safe entry timer 10 000 ms**, **link-up debounce 2000 ms**, topic root `otc6/`)
+- [ ] T003 [P] Create compile-time defaults in `firmware/main/app_config.h` (GPIO in=2 / out=3, SoftAP button GPIO9 ≥5 s, CH min/max 10.0/90.0, DHW/MaxTSet fallbacks for ID 56/57 when ID 48/49 absent, ID 7/14 **0..100**, boiler-link failure threshold 3, **fail-safe entry timer 10 000 ms**, **link-up debounce 2000 ms**, topic root `otc6/`)
 - [ ] T004 [P] Scaffold host test harness under `firmware/tests/host/` (CMake/`idf.py` host-test entry for **Unity** suites)
 - [ ] T005 [P] Add HIL scenario stubs in `firmware/tests/hil/` that mirror quickstart.md V1–V9 checklists
 
@@ -100,15 +100,15 @@ description: "Task list for OpenTherm Wi‑Fi MQTT Gateway implementation"
 
 ### Tests for User Story 2
 
-- [ ] T025 [P] [US2] Add host tests for SetpointBounds resolution and ID 1 reject-not-clamp in `firmware/tests/host/test_setpoint_bounds.c`
+- [ ] T025 [P] [US2] Add host tests for SetpointBounds / range resolution and reject-not-clamp for v1 range-checked IDs (**1, 8** if available, **7, 14, 56, 57**) in `firmware/tests/host/test_setpoint_bounds.c`
 - [ ] T026 [P] [US2] Add host tests for WritableCommand outcomes (`accepted`, `rejected_range`, `rejected_failsafe`, `ot_failed`) including **outcome→wire `reason` mapping** (`rejected_range`→`out_of_range`; `rejected_failsafe`/`ot_failed` unchanged), **boiler-link unhealthy still attempts write** (success→`accepted` / fail→`ot_failed` + `ot/<N>/rejection`, never a link pre-reject; writes do not clear BoilerLink counters), and **rejection topic for every writable N** in `firmware/tests/host/test_mqtt_commands.c`
 
 ### Implementation for User Story 2
 
-- [ ] T027 [P] [US2] Implement effective CH min/max (`SetpointBounds`: prefer boiler max-limit ID e.g. 57 for max; **v1 min = SoftAP/NVS** unless a min-limit ID listed under `firmware/tests/host/fixtures/` is catalog-available) in `firmware/main/ot_catalog.c` / `firmware/main/ot_catalog.h` (owner module; `mqtt_commands` consumes the API)
+- [ ] T027 [P] [US2] Implement effective bounds for v1 range-checked IDs in `firmware/main/ot_catalog.c` / `firmware/main/ot_catalog.h` (owner module; `mqtt_commands` consumes the API): ID **1**/**8** via `SetpointBounds` (prefer boiler max-limit ID e.g. 57 for max; **v1 min = SoftAP/NVS** unless fixture min-limit); ID **56**←ID 48; ID **57**←ID 49; ID **7**/**14**←0..100 unless fixture override
 - [ ] T028 [US2] Implement MQTT command subscriptions for every catalog-writable ID and enqueue serialized OT writes in `firmware/main/mqtt_commands.c` and `firmware/main/mqtt_commands.h`
 - [ ] T029 [US2] Publish Discovery for writable controls (`number` / `switch` / etc.) including command topics in `firmware/main/mqtt_discovery.c`
-- [ ] T030 [US2] Implement per-ID rejection path in `firmware/main/mqtt_commands.c`: on any non-success outcome publish JSON on `otc6/<device_id>/ot/<N>/rejection` per `contracts/mqtt-ha-discovery.md` — map `rejected_range`→`reason=out_of_range`, `rejected_failsafe`→`rejected_failsafe`, `ot_failed`→`ot_failed` (ID 1 out-of-range keeps last accepted reflected state; **same topic pattern for every writable N** — FR-004/013); optional HA `event`/diagnostic discovery MAY be added later without replacing the topic
+- [ ] T030 [US2] Implement per-ID rejection path in `firmware/main/mqtt_commands.c`: on any non-success outcome publish JSON on `otc6/<device_id>/ot/<N>/rejection` per `contracts/mqtt-ha-discovery.md` — map `rejected_range`→`reason=out_of_range`, `rejected_failsafe`→`rejected_failsafe`, `ot_failed`→`ot_failed` (range-checked out-of-range keeps last accepted reflected state; **same topic pattern for every writable N** — FR-004/013); optional HA `event`/diagnostic discovery MAY be added later without replacing the topic
 - [ ] T031 [US2] Implement Status (ID 0) CH-enable command path when supported: update pending master Status flags and apply on next Status **`READ-DATA(id=0)`** exchange (not only zeroing setpoint; **never** `WRITE-DATA(id=0)`) in `firmware/main/mqtt_commands.c` / `firmware/main/ot_poll.c`
 - [ ] T032 [US2] Reflect write success to HA state within SC-002; on failure publish `ot/<N>/rejection` and leave reflected state unchanged (no false success) in `firmware/main/mqtt_commands.c`
 - [ ] T033 [US2] Ensure bursty HA writes cannot starve ≥1 Hz keepalive (command queue + poll budget) in `firmware/main/ot_poll.c` and verify via `firmware/tests/hil/v6_keepalive_under_load.md`
@@ -125,14 +125,14 @@ description: "Task list for OpenTherm Wi‑Fi MQTT Gateway implementation"
 
 ### Tests for User Story 3
 
-- [ ] T034 [P] [US3] Add host tests for fail-safe FSM transitions and write refusal in `firmware/tests/host/test_failsafe.c`
+- [ ] T034 [P] [US3] Add host tests for fail-safe FSM transitions, write refusal, and **Option A availability**: entry timer running → treat app availability as `online` / writes allowed; `active` → present as `offline` (helper called or LWT/birth policy stub) + `remote_writes_allowed=false` in `firmware/tests/host/test_failsafe.c`
 
 ### Implementation for User Story 3
 
 - [ ] T035 [US3] Implement fail-safe detection in `firmware/main/failsafe.c` and `firmware/main/failsafe.h`: Wi‑Fi STA disconnect / lost-IP **or** MQTT disconnect/client error starts the **10 000 ms** entry timer from `app_config.h`; enter fail-safe when the timer expires while link still down (SC-004); clear/cancel the timer on Wi‑Fi+MQTT healthy again; **remote writes remain allowed until fail-safe becomes active**. **Ownership (Option A)**: T035 owns the entry timer and `active` / `remote_writes_allowed` state only—call T011 publish helpers from T038 for availability (FR-006)
 - [ ] T036 [US3] While fail-safe active: continue OT keepalive/polling, hold last accepted CH setpoint on the wire, set `remote_writes_allowed=false` in `firmware/main/failsafe.c` integrated with `firmware/main/ot_poll.c` and `firmware/main/mqtt_commands.c`
 - [ ] T037 [US3] On link recovery: wait **2 s** continuous Wi‑Fi+MQTT healthy (link-up debounce from `app_config.h`), apply at most one retained ID 1 if present, ignore retained storms for other writables, then accept live commands in `firmware/main/failsafe.c` / `firmware/main/mqtt_commands.c`
-- [ ] T038 [US3] Wire fail-safe into `firmware/main/main.c`: on T035 transitions call T011 helpers so **active** → retained application MQTT **`offline`** (LWT also `offline`) and **entry timer running** → keep/publish **`online`** (Option A)—not `online` with silent write drops; no invented heat demand; command refusals publish `ot/<N>/rejection` with `reason=rejected_failsafe`
+- [ ] T038 [US3] Wire fail-safe into `firmware/main/main.c`: on T035 transitions call T011 helpers so **active** → application MQTT presents as **`offline`** (retained publish when possible; LWT + next-connect birth `offline` when publish path already dead) and **entry timer running** → keep/publish **`online`** (Option A)—not `online` with silent write drops; no invented heat demand; command refusals publish `ot/<N>/rejection` with `reason=rejected_failsafe`
 - [ ] T039 [US3] Add HIL steps for fail-safe and recovery in `firmware/tests/hil/v7_failsafe.md`
 
 **Checkpoint**: All three user stories independently functional
@@ -143,11 +143,11 @@ description: "Task list for OpenTherm Wi‑Fi MQTT Gateway implementation"
 
 **Purpose**: Contract alignment, optional UX, validation pass, governance note
 
-- [x] T040 [P] Verify `specs/001-wifi-mqtt-opentherm/contracts/opentherm-master.md` GPIO table matches WeAct Mini defaults (in=2 / out=3); amend only if drift reappears
+- [x] T040 [P] **(Documentation gate — complete pre-firmware; not a feature-done signal)** Verify `specs/001-wifi-mqtt-opentherm/contracts/opentherm-master.md` GPIO table matches WeAct Mini defaults (in=2 / out=3); amend only if drift reappears
 - [ ] T041 [P] Optional additive HA `climate` convenience for ID 1 / related status in `firmware/main/mqtt_discovery.c` without removing per-ID entities (FR-002)
 - [ ] T042 [P] Add brief `firmware/README.md` with build/flash and pointer to `specs/001-wifi-mqtt-opentherm/quickstart.md`
 - [ ] T043 Run full quickstart.md host + HIL validation pass (V1–V9 including V8); record results under `firmware/tests/hil/results/` (or checklist sign-off); include `idf.py size` (or equivalent) and confirm soft budgets: app `.bin` ≤ 1.5 MiB, free heap after OT+MQTT ≥ 64 KiB (plan Constraints)
-- [x] T044 [P] Confirm constitution v2.0.0 Wi‑Fi MQTT wording matches this feature (Zigbee/Thread remain out of scope); no further constitution edit required unless drift returns
+- [x] T044 [P] **(Documentation gate — complete pre-firmware; not a feature-done signal)** Confirm constitution v2.0.0 Wi‑Fi MQTT wording matches this feature (Zigbee/Thread remain out of scope); no further constitution edit required unless drift returns
 
 ---
 
@@ -243,3 +243,6 @@ Task: "Implement SetpointBounds resolution (prefer boiler limit IDs)"
 - Target board: WeAct ESP32-C6 Mini; OT adapter GPIO2 in / GPIO3 out; SoftAP button GPIO9
 - Secrets only via SoftAP → NVS; never commit credentials
 - Zigbee and OpenThread remain out of scope (T014 / T044)
+- SC-001 / SC-002 latency floors are measured in HIL (quickstart V3/V4 via T043); **no host wall-clock assert** is required in unit tests
+- T040 / T044 are documentation alignment gates already checked off; Phase 1–5 firmware work remains open
+- v1 range-checked writables: **1, 8** (if available), **7, 14, 56, 57** (FR-013)

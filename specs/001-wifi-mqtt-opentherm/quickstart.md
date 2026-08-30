@@ -48,8 +48,8 @@ End-to-end checks that prove the feature works. Implementation lives under plann
 
 ### V5 — Out-of-range / command reject (FR-013 / FR-004)
 
-- **Steps**: Publish CH setpoint outside effective min/max; optionally force an OT write failure on another writable ID.
-- **Expect**: No out-of-range OT write; reflected setpoint unchanged; `ot/1/rejection` fires (`out_of_range`). Other writable failures publish `ot/<N>/rejection` (optional HA entity not required).
+- **Steps**: Publish out-of-range values for v1 range-checked IDs present in S (at least ID **1**; also **8** if available, and spot-check **7** / **14** / **56** / **57** when writable); optionally force an OT write failure on a non-range-checked writable.
+- **Expect**: No out-of-range OT write; reflected value unchanged; `ot/<N>/rejection` fires (`out_of_range`) for range-checked IDs. Other writable failures publish `ot/<N>/rejection` (`ot_failed` / `rejected_failsafe`; optional HA entity not required).
 
 ### V6 — Keepalive under load (SC-003, FR-011)
 
@@ -59,7 +59,7 @@ End-to-end checks that prove the feature works. Implementation lives under plann
 ### V7 — Fail-safe (SC-004, FR-006)
 
 - **Steps**: Stop broker or drop Wi‑Fi during normal heat demand; observe through the entry timer; restore.
-- **Expect**: During the **10 000 ms** entry timer, application availability stays **`online`** and writes may still apply (Option A). After the timer, fail-safe active; application availability **`offline`**; OT keepalive continues; last CH setpoint held; remote writes refused (`ot/<N>/rejection` / `rejected_failsafe`); on restore, after **2 s** link-up debounce entities recover; no retained write spiral (at most one retained ID 1).
+- **Expect**: During the **10 000 ms** entry timer, application availability stays **`online`** and writes may still apply (Option A). After the timer, fail-safe active; application availability presents as **`offline`** (live publish and/or LWT + next-connect birth); OT keepalive continues; last CH setpoint held; remote writes refused (`ot/<N>/rejection` / `rejected_failsafe`); on restore, after **2 s** link-up debounce entities recover; no retained write spiral (at most one retained ID 1).
 
 ### V8 — Boiler-link vs MQTT availability (FR-012)
 
