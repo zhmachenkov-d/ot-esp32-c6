@@ -39,9 +39,11 @@ Probe domain: Data IDs 0–127. Persist + boot-validate in NVS.
 ## Command path
 
 1. Validate writable + bounds (ID 1) + not fail-safe  
-2. Enqueue serialized OT write  
+2. Enqueue serialized OT command:
+   - Most IDs: `WRITE-DATA` (or write-class frame) with encoded value  
+   - **ID 0**: update pending master Status flags; apply on next Status **`READ-DATA(id=0)`** keepalive/exchange — **never** `WRITE-DATA(id=0)`  
 3. Reflect success/failure to MQTT state within SC-002 when attempt completes  
-4. Never report success if OT write did not occur
+4. Never report success if the OT command did not occur
 
 ## Fail-safe OT behavior
 

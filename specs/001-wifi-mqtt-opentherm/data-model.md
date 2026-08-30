@@ -72,9 +72,10 @@ One OpenTherm Data ID classified for this boiler.
 **Writable classification** (must match research §3):
 
 1. `writable` requires `support=available`.
-2. OpenTherm directory/class must allow master write for that ID.
-3. Then either ID ∈ known write-safe set (v1 minimum: **0**, **1**, plus fixture-listed IDs) **or** safe write-probe ACK (echo last-read raw / documented no-op—never invent values).
-4. Otherwise `writable=false` (readable-only when available).
+2. OpenTherm directory/class must allow master control for that ID (**or** ID 0 master Status flags).
+3. Then either ID ∈ known write-safe set (v1 minimum: **0**, **1**, plus fixture-listed IDs) **or** safe write-probe ACK (echo last-read raw / documented no-op—never invent values). **Exception**: ID 0 is write-safe by fixture when Status ACK is observed; do not `WRITE-DATA` probe ID 0.
+4. **ID 0 semantics**: `writable=true` means HA may set master Status bits (CH enable at minimum). Apply via Status **`READ-DATA(id=0)`** carrying master flags—**never** `WRITE-DATA(id=0)`.
+5. Otherwise `writable=false` (readable-only when available).
 
 **Relationships**: Many comprise `SupportedCatalog`; each maps to zero or one live `DataIdEntity` (omit if unsupported).
 
@@ -152,7 +153,7 @@ Explicit operator-visible rejection (FR-013).
 
 **Transitions**:
 - Link loss (Wi‑Fi STA disconnect/lost-IP or MQTT disconnect/error) starts entry timer → `active` within 10 s if still down (SC-004)
-- Link recovery (Wi‑Fi+MQTT healthy) + debounce → inactive; optional single retained ID 1 apply; then accept live writes
+- Link recovery: Wi‑Fi+MQTT healthy continuously for **2 s** (link-up debounce) → inactive; optional single retained ID 1 apply; then accept live writes
 
 ---
 
@@ -175,7 +176,7 @@ Explicit operator-visible rejection (FR-013).
 ## Encoding notes
 
 - Temperatures: OpenTherm f8.8 ↔ °C float for MQTT JSON/state strings (see `knowledge/opentherm` data encoding).
-- Status flags (ID 0): bitfields mapped to additive `binary_sensor` / `switch` projections (see task T021b) without losing the underlying ID 0 entity when supported.
+- Status flags (ID 0): bitfields mapped to additive `binary_sensor` / `switch` projections (see task T021b) without losing the underlying ID 0 entity when supported. Master-bit commands use the Status exchange, not `WRITE-DATA(id=0)`.
 - Convenience `climate` (optional) is additive UX only; per-ID entities remain required.
 
 ### Default HA component map (v1)

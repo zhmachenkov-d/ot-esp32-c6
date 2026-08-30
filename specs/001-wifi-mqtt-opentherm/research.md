@@ -41,10 +41,11 @@ All Technical Context unknowns and integration choices resolved below. Sources: 
 
 1. Start from IDs with `support=available` after read probe.
 2. Mark `writable=true` only when **both** hold:
-   - The OpenTherm message directory / ID class marks the ID as master-writeable (write-data / write-flag class), **and**
-   - Either (a) the ID is in the **known write-safe set** (v1: ID 0 Status flags that include CH enable, ID 1 Control setpoint, plus any other IDs explicitly listed in `ot_catalog` fixtures as write-safe), **or** (b) a **safe write probe** succeeds: master write of the last-read raw value (or documented no-op bit pattern) returns ACK—never probe with invented setpoints or enable flips.
-3. If directory says non-writable, or write probe fails / is skipped outside the known set → `writable=false` (read entity only when available).
-4. Never fabricate HA write controls for unsupported IDs.
+   - The OpenTherm message directory / ID class marks the ID as master-controllable (write-data / write-flag class, **or** ID 0 master Status flags), **and**
+   - Either (a) the ID is in the **known write-safe set** (v1: **ID 0** Status master flags including CH enable, **ID 1** Control setpoint, plus any other IDs explicitly listed in `ot_catalog` fixtures as write-safe), **or** (b) a **safe write probe** succeeds: master write of the last-read raw value (or documented no-op bit pattern) returns ACK—never probe with invented setpoints or enable flips.
+3. **ID 0 special case (normative)**: Catalog `writable=true` for ID 0 means HA may command **master Status bits** (at least CH enable). The firmware applies those bits on the mandatory Status **`READ-DATA(id=0, master_status, …)`** exchange—**never** `WRITE-DATA(id=0)` (matches `knowledge/opentherm/data-id-0-status.md`). Safe-probe for ID 0 is N/A; treat as write-safe by fixture when Status ACK is observed.
+4. If directory says non-writable (and not ID 0), or write probe fails / is skipped outside the known set → `writable=false` (read entity only when available).
+5. Never fabricate HA write controls for unsupported IDs.
 
 **Rationale**: FR-015 + existing `discovery-catalog` knowledge; SC-007 needs a known set S on boiler/simulator.
 
@@ -65,7 +66,7 @@ All Technical Context unknowns and integration choices resolved below. Sources: 
 | Readable continuous | `sensor` | ID 25 Tboiler, pressures, modulation, u8/u16 codes |
 | Readable flag8 / bitfield (whole ID) | `sensor` (raw) **plus** additive `binary_sensor` for documented bits | ID 0 Status raw entity always; flame/fault/CH-active projections when supported |
 | Writable numeric | `number` (min/max/step) | generic writable floats/ints; raw flag8 write |
-| Writable boolean / enable | `switch` | CH enable path via Status write when supported |
+| Writable boolean / enable | `switch` | CH enable via ID 0 master Status flags on Status exchange (not WRITE-DATA) |
 | CH water climate UX | optional convenience `climate` for ID 1 + related status | MUST NOT replace per-ID entities (FR-002) |
 | CH setpoint reject | status topic `otc6/<id>/ot/1/rejection` (required); optional `event` / diagnostic `binary_sensor` | topic alone satisfies FR-013; entity is additive UX |
 
@@ -98,7 +99,7 @@ Publish retained discovery configs after catalog validation; re-publish on recon
 
 ## 6. Fail-safe and retained MQTT writes
 
-**Decision**: Wi‑Fi STA disconnect / lost-IP **or** MQTT client disconnect/error starts a fail-safe entry timer; if the combined link stays unhealthy, enter fail-safe within **10 s** (SC-004) — continue OT keepalive/polling; **hold last commanded CH setpoint** (ID 1); refuse **all** remote Data ID writes until link healthy (FR-006). Cancel the timer if Wi‑Fi and MQTT recover before expiry. On recovery: debounce link-up; **apply at most one retained CH setpoint (ID 1)** if present, then follow live commands; ignore retained storms for other writables (do not apply retained non-ID-1 commands automatically).
+**Decision**: Wi‑Fi STA disconnect / lost-IP **or** MQTT client disconnect/error starts a fail-safe entry timer; if the combined link stays unhealthy, enter fail-safe within **10 s** (SC-004) — continue OT keepalive/polling; **hold last commanded CH setpoint** (ID 1); refuse **all** remote Data ID writes until link healthy (FR-006). Cancel the timer if Wi‑Fi and MQTT recover before expiry. On recovery: require **2 s** continuous Wi‑Fi STA + MQTT healthy (**link-up debounce**); then **apply at most one retained CH setpoint (ID 1)** if present, then follow live commands; ignore retained storms for other writables (do not apply retained non-ID-1 commands automatically).
 
 **Rationale**: Spec Assumptions default; aligns with OTGateway-style emergency thinking without inventing new demand.
 
@@ -165,7 +166,7 @@ Publish retained discovery configs after catalog validation; re-publish on recon
 | Testing | Host unit + HIL/quickstart |
 | HA entity types | Table in §4 |
 | SoftAP / button | SoftAP portal; GPIO9 ≥5 s |
-| Fail-safe / retained | Hold last CH; refuse writes; ≤1 retained ID 1 after debounce |
+| Fail-safe / retained | Hold last CH; refuse writes; ≤1 retained ID 1 after **2 s** link-up debounce |
 | CH default min/max | 10.0 / 90.0 °C |
 | Topic namespace | `otc6/<device_id>/` |
 | Zigbee/Thread | Absent from design |

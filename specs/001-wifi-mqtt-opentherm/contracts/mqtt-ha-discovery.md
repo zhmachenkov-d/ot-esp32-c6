@@ -32,6 +32,21 @@ Boiler-link health MUST NOT reuse this topic as its only signal.
 
 ---
 
+## Unavailable / invalid value sentinels
+
+Consistent operator-visible behavior when a value cannot be shown (constitution III):
+
+| Condition | MQTT / HA behavior |
+|-----------|-------------------|
+| Device MQTT `offline` (LWT / disconnect) | Entities using `availability_topic` become unavailable via HA availability — do not invent fresh OT values |
+| Boiler-link `unhealthy` | Keep publishing `boiler_link=unhealthy`; for Data ID state topics that have no valid last sample **or** whose last exchange failed after unhealthy threshold: publish state payload **empty string** (HA treats as unknown/unavailable). Do **not** publish fabricated numeric zeros |
+| `DATA-INVALID` / no valid decode yet | Same empty-string state on `ot/<N>/state` until a valid ACK sample exists; discovery entity may remain configured |
+| Fail-safe active | Device may stay MQTT `online` while OT runs; remote commands → `rejected_failsafe`; reflected states stay last accepted (or empty if never accepted)—not false success |
+
+Do not use topic-specific one-off unavailable encodings. Empty string is the v1 sentinel for “no valid value” on per-ID state topics.
+
+---
+
 ## Boiler-link health
 
 **Discovery** (example):
@@ -113,5 +128,5 @@ Optional: also discover `event` or diagnostic `binary_sensor` that toggles/pulse
 
 ## Retained writes on reconnect
 
-- After link-up debounce: apply **at most one** retained message on `ot/<1>/set` if present
+- After **2 s** link-up debounce (Wi‑Fi STA + MQTT both healthy continuously): apply **at most one** retained message on `ot/<1>/set` if present
 - Do not auto-apply retained messages for other `ot/<N>/set` topics
