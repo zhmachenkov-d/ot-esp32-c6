@@ -10,7 +10,7 @@ All Technical Context unknowns and integration choices resolved below. Sources: 
 
 ## 1. OpenTherm stack on ESP-IDF / ESP32-C6
 
-**Decision**: Use `sazanof/opentherm` (^1.0.3 / 1.0.7, MIT, IDF ≥ 5.2) as the primary OpenTherm master component; pin defaults **GPIO in=2 / out=3** on WeAct ESP32-C6 Mini (keeps USB Serial/JTAG on GPIO12/13 free). Treat ESP32-C6 as a **first validation milestone**: if framing/interrupts fail on C6, port Melnyk master timing onto ESP-IDF GPIO+`esp_timer` (same adapter pins) rather than pulling Arduino core.
+**Decision**: Use `sazanof/opentherm` (^1.0.3 / 1.0.7, MIT, IDF ≥ 5.2) as the primary OpenTherm master component; pin defaults **GPIO in=2 / out=3** on WeAct ESP32-C6 Mini (keeps USB Serial/JTAG on GPIO12/13 free). Treat ESP32-C6 as a **first validation milestone**: if framing/interrupts fail on C6, **stop treating T008 as done** and execute the Melnyk-port task (T008b): port Melnyk master timing onto ESP-IDF GPIO+`esp_timer` (same adapter pins) rather than pulling Arduino core. Do not proceed to user-story OT work on a broken master stack.
 
 **Rationale**: Native IDF dependency surface (driver + esp_timer only); already documented in OKF; helpers cover Status / TSet / Tboiler and broad `MSG_ID_*` set needed for full-catalog probing.
 
@@ -99,7 +99,7 @@ Publish retained discovery configs after catalog validation; re-publish on recon
 
 ## 6. Fail-safe and retained MQTT writes
 
-**Decision**: Wi‑Fi STA disconnect / lost-IP **or** MQTT client disconnect/error starts a fail-safe entry timer; if the combined link stays unhealthy, enter fail-safe within **10 s** (SC-004) — continue OT keepalive/polling; **hold last commanded CH setpoint** (ID 1); refuse **all** remote Data ID writes until link healthy (FR-006). Cancel the timer if Wi‑Fi and MQTT recover before expiry. On recovery: require **2 s** continuous Wi‑Fi STA + MQTT healthy (**link-up debounce**); then **apply at most one retained CH setpoint (ID 1)** if present, then follow live commands; ignore retained storms for other writables (do not apply retained non-ID-1 commands automatically).
+**Decision**: Wi‑Fi STA disconnect / lost-IP **or** MQTT client disconnect/error starts a fail-safe entry timer; if the combined link stays unhealthy, enter fail-safe within **10 s** (SC-004) — continue OT keepalive/polling; **hold last commanded CH setpoint** (ID 1); refuse **all** remote Data ID writes until link healthy (FR-006). **Writes remain allowed until fail-safe becomes active.** While fail-safe is active, MQTT availability is **`offline`** (LWT / disconnect)—not `online` with write refusal only. Cancel the timer if Wi‑Fi and MQTT recover before expiry. On recovery: require **2 s** continuous Wi‑Fi STA + MQTT healthy (**link-up debounce**); then **apply at most one retained CH setpoint (ID 1)** if present, then follow live commands; ignore retained storms for other writables (do not apply retained non-ID-1 commands automatically).
 
 **Rationale**: Spec Assumptions default; aligns with OTGateway-style emergency thinking without inventing new demand.
 

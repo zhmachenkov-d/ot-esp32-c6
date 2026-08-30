@@ -49,7 +49,8 @@ description: "Task list for OpenTherm Wi‑Fi MQTT Gateway implementation"
 
 - [ ] T006 Implement NVS persistence for credentials, SoftAP CH bounds, device identity, catalog blob, and **last-accepted CH setpoint** (`last_accepted_ch_setpoint_c` per data-model) in `firmware/main/nvs_store.c` and `firmware/main/nvs_store.h`
 - [ ] T007 [P] Implement OpenTherm f8.8 / typed encode-decode helpers used by poll and MQTT in `firmware/main/ot_codec.c` and `firmware/main/ot_codec.h`
-- [ ] T008 Bring up `sazanof/opentherm` as master on GPIO2/3 with documented adapter assumptions in `firmware/main/ot_poll.c` and `firmware/main/ot_poll.h` (init + single exchange API); **C6 validation gate**: confirm framing/IRQ on WeAct Mini—if it fails, record Melnyk-port fallback decision per research §1 before treating OT bring-up done
+- [ ] T008 Bring up `sazanof/opentherm` as master on GPIO2/3 with documented adapter assumptions in `firmware/main/ot_poll.c` and `firmware/main/ot_poll.h` (init + single exchange API); **C6 validation gate**: confirm framing/IRQ on WeAct Mini. If validation **passes**, mark T008 done and skip T008b. If it **fails**, do **not** treat OT bring-up as done—execute T008b before T009+
+- [ ] T008b **[Conditional — only if T008 C6 validation fails]** Port Melnyk OpenTherm master timing onto ESP-IDF GPIO + `esp_timer` (pins in=2 / out=3; no Arduino core) behind the same `ot_poll` exchange API in `firmware/main/ot_poll.c` / `firmware/main/ot_poll.h`; document the chosen stack in `firmware/README.md` (or a short note under `firmware/main/`); re-run the C6 framing check before continuing Phase 2
 - [ ] T009 Implement Data ID 0–127 discovery/classification (READ-ACK / DATA-INVALID → available; UNKNOWN-DATAID → unsupported), **writable flags per research §3 / data-model** (directory write-class + known write-safe set **0, 1, plus fixture-listed IDs**, or safe echo write-probe; **ID 0 writable = master Status flags via Status READ exchange, never WRITE-DATA(id=0)**), and NVS catalog cache in `firmware/main/ot_catalog.c` and `firmware/main/ot_catalog.h`
 - [ ] T010 Extend `firmware/main/ot_poll.c` / `firmware/main/ot_poll.h` with ≥1 Hz Status keepalive, 120 ms inter-frame gap, fast/slow/promoted tiers, and a serialized write slot that never drops keepalive
 - [ ] T011 Implement ESP-MQTT client with birth/`LWT` on `otc6/<device_id>/status` (`online`/`offline`) in `firmware/main/mqtt_ha.c` and `firmware/main/mqtt_ha.h`; honor NVS `mqtt_tls` (TLS when true; plain TCP when false/default) using broker host/port/username/password from NVS
@@ -57,7 +58,7 @@ description: "Task list for OpenTherm Wi‑Fi MQTT Gateway implementation"
 - [ ] T013 [P] Add host unit tests for `ot_codec` and catalog classification fixtures (including writable true/false cases: known-safe IDs, non-writable directory class, failed/skipped probe) in `firmware/tests/host/test_ot_codec.c` and `firmware/tests/host/test_ot_catalog.c`
 - [ ] T014 Confirm delivered image has no Zigbee/OpenThread features in `firmware/sdkconfig.defaults` and `firmware/CMakeLists.txt` (SC-006)
 
-**Checkpoint**: Foundation ready — OT keepalive runs on device (C6 framing validated or fallback decided); MQTT can connect with injected NVS credentials; host codec/catalog tests pass
+**Checkpoint**: Foundation ready — OT keepalive runs on device (C6 framing validated on `sazanof/opentherm`, or Melnyk-port T008b completed); MQTT can connect with injected NVS credentials; host codec/catalog tests pass
 
 ---
 
@@ -79,7 +80,7 @@ description: "Task list for OpenTherm Wi‑Fi MQTT Gateway implementation"
 - [ ] T019 [P] [US1] Implement boiler-link health state machine (unhealthy after 3 consecutive failures; **healthy after one successful** keepalive/status exchange) publishing `otc6/<device_id>/boiler_link` in `firmware/main/mqtt_ha.c` / `firmware/main/ot_poll.c` as needed
 - [ ] T020 [US1] Implement HA MQTT Discovery publisher for meta entities + every catalog-readable Data ID in `firmware/main/mqtt_discovery.c` and `firmware/main/mqtt_discovery.h` per `contracts/mqtt-ha-discovery.md` (no custom HA Core integration — FR-009)
 - [ ] T021 [US1] Publish retained/live readable Data ID state on `otc6/<device_id>/ot/<N>/state` from poll results in `firmware/main/mqtt_discovery.c` (or thin glue in `firmware/main/mqtt_ha.c`) meeting SC-001; use **empty-string** state when no valid sample (contracts unavailable sentinels)
-- [ ] T021b [P] [US1] When Data ID 0 is catalog-available, publish additive HA `binary_sensor` (and writable `switch` where master bits are writable) projections for Status flag8 bits (slave: fault, CH/DHW active, flame, etc.; master: CH enable at minimum) **without** removing the underlying ID 0 entity, in `firmware/main/mqtt_discovery.c` per data-model Encoding notes / `knowledge/opentherm/data-id-0-status.md`
+- [ ] T021b [US1] When Data ID 0 is catalog-available, publish additive HA `binary_sensor` (and writable `switch` where master bits are writable) projections for Status flag8 bits (slave: fault, CH/DHW active, flame, etc.; master: CH enable at minimum) **without** removing the underlying ID 0 entity, in `firmware/main/mqtt_discovery.c` per FR-002 / data-model Encoding notes / `knowledge/opentherm/data-id-0-status.md` (depends on T020/T021 discovery + state paths in the same files—not parallel)
 - [ ] T022 [US1] On MQTT reconnect / catalog validation, re-publish discovery configs so HA recovers entities without manual YAML in `firmware/main/mqtt_discovery.c`
 - [ ] T023 [US1] Integrate SoftAP → STA → MQTT → catalog validate → discovery into `firmware/main/main.c` end-to-end path
 - [ ] T024 [US1] Document SoftAP SSID `OTC6-XXXX` and commissioning steps against quickstart V1 in `firmware/tests/hil/v1_commissioning.md`
@@ -126,10 +127,10 @@ description: "Task list for OpenTherm Wi‑Fi MQTT Gateway implementation"
 
 ### Implementation for User Story 3
 
-- [ ] T035 [US3] Implement fail-safe detection in `firmware/main/failsafe.c` and `firmware/main/failsafe.h`: Wi‑Fi STA disconnect / lost-IP **or** MQTT disconnect/client error starts a timer; enter fail-safe **within 10 s** of sustained link loss (SC-004); clear/cancel the timer on Wi‑Fi+MQTT healthy again
+- [ ] T035 [US3] Implement fail-safe detection in `firmware/main/failsafe.c` and `firmware/main/failsafe.h`: Wi‑Fi STA disconnect / lost-IP **or** MQTT disconnect/client error starts a timer; enter fail-safe **within 10 s** of sustained link loss (SC-004); clear/cancel the timer on Wi‑Fi+MQTT healthy again; **remote writes remain allowed until fail-safe becomes active** (FR-006)
 - [ ] T036 [US3] While fail-safe active: continue OT keepalive/polling, hold last accepted CH setpoint on the wire, set `remote_writes_allowed=false` in `firmware/main/failsafe.c` integrated with `firmware/main/ot_poll.c` and `firmware/main/mqtt_commands.c`
 - [ ] T037 [US3] On link recovery: wait **2 s** continuous Wi‑Fi+MQTT healthy (link-up debounce from `app_config.h`), apply at most one retained ID 1 if present, ignore retained storms for other writables, then accept live commands in `firmware/main/failsafe.c` / `firmware/main/mqtt_commands.c`
-- [ ] T038 [US3] Wire fail-safe into `firmware/main/main.c` and MQTT availability so HA sees offline/unavailable correctly without inventing heat demand
+- [ ] T038 [US3] Wire fail-safe into `firmware/main/main.c` and MQTT availability so that while fail-safe is active HA sees MQTT **`offline`** (LWT) / unavailable—not `online` with silent write drops—and no invented heat demand
 - [ ] T039 [US3] Add HIL steps for fail-safe and recovery in `firmware/tests/hil/v7_failsafe.md`
 
 **Checkpoint**: All three user stories independently functional
@@ -174,8 +175,8 @@ description: "Task list for OpenTherm Wi‑Fi MQTT Gateway implementation"
 ### Parallel Opportunities
 
 - Phase 1: T002–T005 in parallel after T001
-- Phase 2: T007 parallel with T006; T013 parallel with T011–T012 once APIs exist
-- US1: T015–T016 parallel; T019 parallel with T017–T018; T021b parallel with T021–T022; T024b parallel with T024
+- Phase 2: T007 parallel with T006; T013 parallel with T011–T012 once APIs exist; T008b only after T008 fails (sequential, not parallel)
+- US1: T015–T016 parallel; T019 parallel with T017–T018; T021b **after** T020/T021 (same files); T024b parallel with T024
 - US2: T025–T026 and T027 parallel before command wiring
 - US3: T034 parallel with early failsafe skeleton
 - Polish: T040, T041, T042, T044 parallel

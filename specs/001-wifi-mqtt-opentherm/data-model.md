@@ -152,7 +152,8 @@ Explicit operator-visible rejection (FR-013).
 | `remote_writes_allowed` | bool | False while active |
 
 **Transitions**:
-- Link loss (Wi‑Fi STA disconnect/lost-IP or MQTT disconnect/error) starts entry timer → `active` within 10 s if still down (SC-004)
+- Link loss (Wi‑Fi STA disconnect/lost-IP or MQTT disconnect/error) starts entry timer → `active` within 10 s if still down (SC-004); **remote writes allowed until `active`**
+- While `active`: MQTT availability is `offline` (LWT); `remote_writes_allowed=false`
 - Link recovery: Wi‑Fi+MQTT healthy continuously for **2 s** (link-up debounce) → inactive; optional single retained ID 1 apply; then accept live writes
 
 ---

@@ -59,7 +59,7 @@ End-to-end checks that prove the feature works. Implementation lives under plann
 ### V7 — Fail-safe (SC-004, FR-006)
 
 - **Steps**: Stop broker or drop Wi‑Fi during normal heat demand.
-- **Expect**: Within **10 s**, fail-safe active; OT keepalive continues; last CH setpoint held; remote writes ignored; on restore, after **2 s** link-up debounce entities recover; no retained write spiral (at most one retained ID 1).
+- **Expect**: Within **10 s**, fail-safe active; MQTT availability `offline` (LWT); OT keepalive continues; last CH setpoint held; remote writes refused once fail-safe is active (writes may still apply during the pre-entry timer); on restore, after **2 s** link-up debounce entities recover; no retained write spiral (at most one retained ID 1).
 
 ### V8 — Boiler-link vs MQTT availability (FR-012)
 
