@@ -38,7 +38,7 @@ OpenTherm master↔slave health, distinct from MQTT availability.
 | Field | Type | Notes |
 |-------|------|-------|
 | `state` | enum | `healthy` \| `unhealthy` |
-| `consecutive_failures` | uint | Incremented on failed OT exchange |
+| `consecutive_failures` | uint | Incremented only on failed **keepalive/status** exchanges (not tiered catalog reads/writes) |
 | `failure_threshold` | uint | Default **3** |
 | `last_success_ms` | timestamp | Monotonic |
 
@@ -121,11 +121,11 @@ Inbound HA → gateway write intent.
 | `outcome` | enum | `accepted` \| `rejected_range` \| `rejected_failsafe` \| `ot_failed` |
 
 **Rules**:
-- If `failsafe` active (`remote_writes_allowed=false`): outcome `rejected_failsafe`; no OT write; publish `ot/<N>/rejection`; no false success
-- Boiler-link `unhealthy` does **not** pre-reject: still attempt the OT write (after range/fail-safe checks); on exchange failure → `ot_failed` + `ot/<N>/rejection`; on success → `accepted` (may clear consecutive failures / restore healthy per BoilerLink transitions)
-- ID 1: range check against `SetpointBounds` before OT write → `rejected_range` + `ot/1/rejection` if out of bounds
+- If `failsafe` active (`remote_writes_allowed=false`): outcome `rejected_failsafe`; no OT write; publish `ot/<N>/rejection` with `reason=rejected_failsafe`; no false success
+- Boiler-link `unhealthy` does **not** pre-reject: still attempt the OT write (after range/fail-safe checks); on exchange failure → `ot_failed` + `ot/<N>/rejection`; on success → `accepted`. Non-keepalive writes MUST NOT increment or clear `BoilerLink.consecutive_failures` or flip `healthy`/`unhealthy` (only keepalive/status exchanges do)
+- ID 1: range check against `SetpointBounds` before OT write → `outcome=rejected_range` and publish `ot/1/rejection` with `reason=out_of_range` if out of bounds
 - Serialize onto OT bus; must not starve keepalive
-- Non-success outcomes MUST publish on `otc6/<device_id>/ot/<N>/rejection` (same pattern for every writable N)
+- Non-success outcomes MUST publish on `otc6/<device_id>/ot/<N>/rejection` (same pattern for every writable N): map `rejected_range`→wire `reason=out_of_range`; `rejected_failsafe`→`rejected_failsafe`; `ot_failed`→`ot_failed`
 
 ---
 
