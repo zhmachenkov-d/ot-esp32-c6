@@ -12,6 +12,7 @@
 | Operational | STA associated + MQTT configured | Long-press only for re-provision (v1) |
 
 Sustained Wi‑Fi/MQTT failure alone MUST NOT open SoftAP in v1.
+Missing or corrupt MQTT CA while TLS is enabled MUST NOT open SoftAP; recover via long-press only.
 
 ## SoftAP
 

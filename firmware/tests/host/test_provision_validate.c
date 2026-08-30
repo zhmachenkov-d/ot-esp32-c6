@@ -80,6 +80,36 @@ void test_accept_tls_with_ca(void)
     TEST_ASSERT_EQUAL(PROVISION_OK, provision_validate(&f));
 }
 
+void test_boot_no_credentials_opens_softap(void)
+{
+    TEST_ASSERT_EQUAL(PROVISION_BOOT_SOFTAP,
+                      provision_boot_action(false, false, false, false));
+    TEST_ASSERT_EQUAL(PROVISION_BOOT_SOFTAP,
+                      provision_boot_action(true, false, true, false));
+}
+
+void test_boot_tls_missing_ca_does_not_open_softap(void)
+{
+    /* Credentials present + mqtt_tls + missing CA → SoftAP must not auto-start. */
+    TEST_ASSERT_EQUAL(PROVISION_BOOT_RUN_NO_MQTT,
+                      provision_boot_action(true, true, true, false));
+}
+
+void test_boot_tls_with_ca_runs_mqtt(void)
+{
+    TEST_ASSERT_EQUAL(PROVISION_BOOT_RUN,
+                      provision_boot_action(true, true, true, true));
+    TEST_ASSERT_EQUAL(PROVISION_BOOT_RUN,
+                      provision_boot_action(true, true, false, false));
+}
+
+void test_boot_after_button_clears_credentials_opens_softap(void)
+{
+    /* Long-press clears credentials then restart → first-boot SoftAP path. */
+    TEST_ASSERT_EQUAL(PROVISION_BOOT_SOFTAP,
+                      provision_boot_action(false, false, true, false));
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -89,5 +119,9 @@ int main(void)
     RUN_TEST(test_reject_port_zero);
     RUN_TEST(test_reject_tls_without_ca);
     RUN_TEST(test_accept_tls_with_ca);
+    RUN_TEST(test_boot_no_credentials_opens_softap);
+    RUN_TEST(test_boot_tls_missing_ca_does_not_open_softap);
+    RUN_TEST(test_boot_tls_with_ca_runs_mqtt);
+    RUN_TEST(test_boot_after_button_clears_credentials_opens_softap);
     return UNITY_END();
 }

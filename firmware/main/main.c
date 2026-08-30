@@ -207,22 +207,30 @@ void app_main(void)
     }
 
     const char *ca_pem = NULL;
+    bool ca_pem_ok = true;
     if (s_cfg.mqtt_tls) {
         size_t ca_len = 0;
         esp_err_t ca_err = nvs_store_mqtt_ca_load(s_mqtt_ca, sizeof(s_mqtt_ca), &ca_len);
-        if (ca_err != ESP_OK || s_mqtt_ca[0] == '\0') {
-            ESP_LOGE(TAG, "MQTT TLS enabled but CA PEM missing — re-provision");
-            ESP_ERROR_CHECK(provision_softap_start(s_cfg.device_id));
-            return;
+        ca_pem_ok = (ca_err == ESP_OK && s_mqtt_ca[0] != '\0');
+        if (ca_pem_ok) {
+            ca_pem = s_mqtt_ca;
         }
-        ca_pem = s_mqtt_ca;
     }
 
-    ESP_ERROR_CHECK(mqtt_ha_init(s_cfg.device_id, s_cfg.mqtt_host, s_cfg.mqtt_port,
-                                 s_cfg.mqtt_username, s_cfg.mqtt_password, s_cfg.mqtt_tls,
-                                 ca_pem));
-    mqtt_ha_set_connected_callback(on_mqtt_connected, NULL);
-    ESP_ERROR_CHECK(mqtt_ha_start());
+    provision_boot_action_t boot =
+        provision_boot_action(true, true, s_cfg.mqtt_tls, ca_pem_ok);
+    if (boot == PROVISION_BOOT_RUN_NO_MQTT) {
+        /* SoftAP only via GPIO9 long-press once credentials exist (contract). */
+        ESP_LOGE(TAG,
+                 "MQTT TLS enabled but CA PEM missing — MQTT disabled; "
+                 "long-press GPIO9 to re-provision");
+    } else {
+        ESP_ERROR_CHECK(mqtt_ha_init(s_cfg.device_id, s_cfg.mqtt_host, s_cfg.mqtt_port,
+                                     s_cfg.mqtt_username, s_cfg.mqtt_password, s_cfg.mqtt_tls,
+                                     ca_pem));
+        mqtt_ha_set_connected_callback(on_mqtt_connected, NULL);
+        ESP_ERROR_CHECK(mqtt_ha_start());
+    }
 
     /* Catalog: load cache then discover/validate */
     if (ot_catalog_load_nvs(&s_catalog) != ESP_OK) {

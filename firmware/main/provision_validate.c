@@ -22,3 +22,15 @@ provision_validate_result_t provision_validate(const provision_form_t *form)
     }
     return PROVISION_OK;
 }
+
+provision_boot_action_t provision_boot_action(bool has_wifi_credentials, bool has_mqtt_config,
+                                              bool mqtt_tls, bool ca_pem_ok)
+{
+    if (!has_wifi_credentials || !has_mqtt_config) {
+        return PROVISION_BOOT_SOFTAP;
+    }
+    if (mqtt_tls && !ca_pem_ok) {
+        return PROVISION_BOOT_RUN_NO_MQTT;
+    }
+    return PROVISION_BOOT_RUN;
+}

@@ -34,6 +34,19 @@ typedef enum {
 /** Host-testable SoftAP form validation. */
 provision_validate_result_t provision_validate(const provision_form_t *form);
 
+/**
+ * Boot SoftAP / MQTT policy once NVS has been read (host-testable).
+ * Missing TLS CA must not auto-open SoftAP; recovery is GPIO9 long-press only.
+ */
+typedef enum {
+    PROVISION_BOOT_SOFTAP = 0,  /**< No Wi‑Fi/MQTT credentials — open SoftAP */
+    PROVISION_BOOT_RUN,         /**< STA + MQTT as configured */
+    PROVISION_BOOT_RUN_NO_MQTT, /**< STA only; TLS on but CA missing/empty */
+} provision_boot_action_t;
+
+provision_boot_action_t provision_boot_action(bool has_wifi_credentials, bool has_mqtt_config,
+                                              bool mqtt_tls, bool ca_pem_ok);
+
 esp_err_t provision_softap_start(const char *device_id);
 void provision_softap_stop(void);
 
