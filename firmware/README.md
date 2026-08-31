@@ -31,8 +31,8 @@ HIL checklists: `tests/hil/`.
 
 ## SoftAP commissioning
 
-Unconfigured boot → join SoftAP `OTC6-XXXX` (open). A captive portal should open automatically.
+Unconfigured boot → join SoftAP `OTC6-XXXX` (**WPA2-PSK**). The SoftAP password (16-hex PSK) and one-time **Setup PIN** are logged on USB serial when SoftAP starts — see [`contracts/softap-provisioning.md`](../specs/001-wifi-mqtt-opentherm/contracts/softap-provisioning.md). A captive portal should open automatically after you join.
 
-If it does not, open **http://192.168.4.1/** in the phone/laptop browser while connected to the SoftAP.
+If it does not, open **http://192.168.4.1/** in the phone/laptop browser while connected to the SoftAP. Portal save requires the Setup PIN from serial (not shown in the HTML form page body for silent reuse).
 
-Long-press GPIO9 ≥5 s clears credentials and re-enters SoftAP mode.
+Long-press GPIO9 ≥5 s clears Wi‑Fi/MQTT credentials and re-enters SoftAP mode (SoftAP PSK is retained for label/QR).

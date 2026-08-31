@@ -60,6 +60,34 @@ void test_mandatory_fixture_ids(void)
     }
 }
 
+void test_directory_write_class_expanded(void)
+{
+    /* fixtures/directory_write_class.json — beyond 0,1,7,8,14,56,57 */
+    const uint8_t write_class[] = { 2, 4, 16, 23, 24, 58, 11, 20, 116, 126 };
+    for (unsigned i = 0; i < sizeof(write_class); i++) {
+        TEST_ASSERT_TRUE_MESSAGE(ot_catalog_is_directory_writable(write_class[i]),
+                                 "expected directory write-class");
+    }
+    const uint8_t read_only[] = { 3, 5, 17, 25, 48, 49 };
+    for (unsigned i = 0; i < sizeof(read_only); i++) {
+        TEST_ASSERT_FALSE_MESSAGE(ot_catalog_is_directory_writable(read_only[i]),
+                                  "expected read-only directory class");
+    }
+}
+
+void test_directory_write_probe_path_makes_writable(void)
+{
+    /* Non-known-safe directory ID becomes writable only after successful echo probe */
+    ot_catalog_entry_t e;
+    ot_catalog_classify_read(&e, 16, OT_EXCHANGE_OK, 0x1580, true, false, false);
+    TEST_ASSERT_TRUE(e.readable);
+    TEST_ASSERT_FALSE(e.writable);
+
+    ot_catalog_classify_read(&e, 16, OT_EXCHANGE_OK, 0x1580, true, false, true);
+    TEST_ASSERT_TRUE(e.writable);
+    TEST_ASSERT_EQUAL(OT_HA_NUMBER, e.ha_component);
+}
+
 void test_catalog_nvs_full_round_trip(void)
 {
     ot_catalog_t src;
@@ -99,6 +127,8 @@ int main(void)
     RUN_TEST(test_classify_id0_writable_no_write_data);
     RUN_TEST(test_classify_non_writable_directory);
     RUN_TEST(test_mandatory_fixture_ids);
+    RUN_TEST(test_directory_write_class_expanded);
+    RUN_TEST(test_directory_write_probe_path_makes_writable);
     RUN_TEST(test_catalog_nvs_full_round_trip);
     return UNITY_END();
 }

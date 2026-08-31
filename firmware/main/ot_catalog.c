@@ -11,17 +11,56 @@ _Static_assert(5 + OT_CATALOG_MAX_IDS * 4 <= NVS_CATALOG_BLOB_MAX,
                "NVS_CATALOG_BLOB_MAX too small for catalog blob");
 
 /* v1 known write-safe set: 0, 1 + fixtures may extend via write_safe_fixture flag */
-static bool id_is_directory_writable_default(uint8_t id)
+/*
+ * Master-write class from knowledge/opentherm/opentherm-data-ids.md (R/W column
+ * W or R/W). ID 0 is Status master flags via READ exchange (never WRITE-DATA).
+ * Directory-writable + available → safe echo write-probe (except ID 0 / known-safe).
+ */
+bool ot_catalog_is_directory_writable(uint8_t id)
 {
-    /* Conservative master-write class defaults for common IDs */
     switch (id) {
-    case 0:  /* Status master flags via READ exchange */
-    case 1:  /* TSet */
-    case 7:  /* Cooling control */
-    case 8:  /* CH2 TSet */
-    case 14: /* Max relative modulation */
-    case 56: /* TdhwSet */
-    case 57: /* MaxTSet */
+    case 0:   /* Status (master flags via READ) */
+    case 1:   /* TSet */
+    case 2:   /* M-Config / M-MemberIDcode */
+    case 4:   /* Command */
+    case 7:   /* Cooling-control */
+    case 8:   /* TsetCH2 */
+    case 11:  /* TSP-index / TSP-value */
+    case 14:  /* Max-rel-mod-level-setting */
+    case 16:  /* TrSet */
+    case 20:  /* Day-Time */
+    case 21:  /* Date */
+    case 22:  /* Year */
+    case 23:  /* TrSetCH2 */
+    case 24:  /* Tr */
+    case 56:  /* TdhwSet */
+    case 57:  /* MaxTSet */
+    case 58:  /* Hcratio */
+    case 71:  /* Vset */
+    case 87:  /* NominalVentilationValue */
+    case 89:  /* TSPindexTSPvalueVentilationHeatRecovery */
+    case 93:  /* Brand */
+    case 94:  /* BrandVersion */
+    case 95:  /* BrandSerialNumber */
+    case 96:  /* CoolingOperationHours */
+    case 97:  /* PowerCycles */
+    case 98:  /* RFsensorStatusInformation */
+    case 99:  /* RemoteOverrideOperatingModeHeatingDHW */
+    case 106: /* TSPindexTSPvalueSolarStorage */
+    case 109: /* ElectricityProducerStarts */
+    case 110: /* ElectricityProducerHours */
+    case 113: /* UnsuccessfulBurnerStarts */
+    case 114: /* FlameSignalTooLowNumber */
+    case 116: /* Burner starts */
+    case 117: /* CH pump starts */
+    case 118: /* DHW pump/valve starts */
+    case 119: /* DHW burner starts */
+    case 120: /* Burner operation hours */
+    case 121: /* CH pump operation hours */
+    case 122: /* DHW pump/valve operation hours */
+    case 123: /* DHW burner operation hours */
+    case 124: /* OpenTherm version Master */
+    case 126: /* Master-version */
         return true;
     default:
         return false;
@@ -95,7 +134,7 @@ void ot_catalog_classify_read(ot_catalog_entry_t *e, uint8_t id,
             e->last_raw = raw;
         }
 
-        bool dir_w = directory_writable || id_is_directory_writable_default(id);
+        bool dir_w = directory_writable || ot_catalog_is_directory_writable(id);
         bool safe = write_safe_fixture || id_in_known_write_safe(id) || write_probe_ok;
         /* ID 0: write-safe by fixture/Status ACK — never WRITE-DATA probe */
         if (id == 0) {
@@ -104,9 +143,6 @@ void ot_catalog_classify_read(ot_catalog_entry_t *e, uint8_t id,
         } else {
             e->writable = dir_w && safe;
             e->ha_component = e->writable ? OT_HA_NUMBER : OT_HA_SENSOR;
-            if (id == 0) {
-                /* unreachable */
-            }
         }
         return;
     }
@@ -270,12 +306,11 @@ esp_err_t ot_catalog_discover(ot_catalog_t *cat)
         }
         ot_exchange_result_t r = ot_poll_exchange(&ex);
         bool write_safe = (id == 0 || id == 1);
+        bool dir_w = ot_catalog_is_directory_writable((uint8_t)id);
         ot_catalog_classify_read(&cat->ids[id], (uint8_t)id, r, ex.response_value,
-                                 id_is_directory_writable_default((uint8_t)id),
-                                 write_safe, false);
+                                 dir_w, write_safe, false);
         /* Safe echo write-probe for directory-writable non-known-safe with valid raw */
-        if (cat->ids[id].support == OT_SUPPORT_AVAILABLE &&
-            id_is_directory_writable_default((uint8_t)id) &&
+        if (cat->ids[id].support == OT_SUPPORT_AVAILABLE && dir_w &&
             !write_safe && cat->ids[id].has_raw && id != 0) {
             ot_exchange_t wx = {
                 .data_id = (uint8_t)id,

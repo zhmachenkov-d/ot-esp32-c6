@@ -271,3 +271,14 @@ Task: "Implement SetpointBounds resolution (prefer boiler limit IDs)"
 - [X] T053 Re-publish MQTT Discovery configs (and additive climate if still enabled) on plain MQTT reconnect / `MQTT_EVENT_CONNECTED`, not only boot and fail-safe recovery, in `firmware/main/mqtt_ha.c` / `firmware/main/main.c` / `firmware/main/mqtt_discovery.c` per T022, research § discovery, US1/AC4 (partial)
 - [X] T054 Update catalog `ids[0].last_raw` / `has_raw` from keepalive Status exchanges and stop publishing CH-enable accept as `"0"`/`"1"` on `ot/0/state` (keep raw Status on the ID 0 entity; projections/climate carry CH enable) in `firmware/main/ot_poll.c` / `firmware/main/mqtt_commands.c` per FR-002, FR-003, Constitution III (partial)
 - [X] T055 Stop advertising HA `number` min/max **0..100** for non–range-checked writables (omit bounds or use encoding-appropriate limits) so HA UI does not invent a gateway range gate in `firmware/main/mqtt_discovery.c` per FR-013 (partial)
+
+---
+
+## Phase 9: Convergence
+
+**Purpose**: Close remaining gaps between checked-off Phase 8 work and current code vs spec/plan/constitution
+
+- [X] T056 Expand OpenTherm directory write-class in `firmware/main/ot_catalog.c` (and `firmware/tests/host/fixtures/`) beyond the hard-coded subset **0,1,7,8,14,56,57** so boiler-supported W/R-W IDs (e.g. **16**, **2**, **4**, **23**, **24**, **58**, and other directory master-write IDs from `knowledge/opentherm/opentherm-data-ids.md`) enter the safe echo write-probe path and expose HA write controls when probe ACK succeeds per FR-002, FR-015, SC-007, research §3 (partial)
+- [X] T057 Complete remaining T043/T048 evidence: capture measured free heap after OT+MQTT (≥ 64 KiB) on WeAct Mini and sign off HIL V1–V8 under `firmware/tests/hil/results/` (or record explicit hardware deferral with owner) per plan Constraints / SC-001–SC-005 (partial)
+- [X] T058 Add host tests for boiler-link consecutive-fail FSM (unhealthy after 3 keepalive/status failures only; healthy after one success; tiered catalog reads do not count) covering `firmware/main/ot_poll.c` `note_keepalive` behavior per FR-012, Constitution II (partial)
+- [X] T059 Fix `firmware/README.md` SoftAP security wording from **(open)** to **WPA2-PSK** (+ Setup PIN pointer) to match `contracts/softap-provisioning.md` and `provision_softap.c` (contradicts)

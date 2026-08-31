@@ -77,6 +77,39 @@ uint8_t ot_poll_get_slave_status_flags(void);
 
 bool ot_poll_boiler_link_healthy(void);
 
+/**
+ * Consecutive-fail boiler-link FSM for keepalive/status exchanges only.
+ * Tiered catalog reads MUST NOT call this. Returns true if healthy flipped.
+ */
+typedef struct {
+    int consecutive_fails;
+    bool healthy;
+} ot_boiler_link_fsm_t;
+
+static inline bool ot_boiler_link_fsm_note(ot_boiler_link_fsm_t *fsm,
+                                          ot_exchange_result_t r,
+                                          int fail_threshold)
+{
+    if (!fsm || fail_threshold < 1) {
+        return false;
+    }
+    bool changed = false;
+    if (r == OT_EXCHANGE_OK || r == OT_EXCHANGE_INVALID) {
+        fsm->consecutive_fails = 0;
+        if (!fsm->healthy) {
+            fsm->healthy = true;
+            changed = true;
+        }
+    } else {
+        fsm->consecutive_fails++;
+        if (fsm->consecutive_fails >= fail_threshold && fsm->healthy) {
+            fsm->healthy = false;
+            changed = true;
+        }
+    }
+    return changed;
+}
+
 /** Hold CH setpoint on the wire (fail-safe). */
 void ot_poll_set_hold_ch_setpoint(bool enable, float celsius);
 

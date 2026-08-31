@@ -27,8 +27,7 @@ static SemaphoreHandle_t s_bus_mtx;
 static TaskHandle_t s_task;
 static uint8_t s_master_hb;
 static uint8_t s_slave_lb;
-static int s_keepalive_fails;
-static bool s_boiler_healthy = true;
+static ot_boiler_link_fsm_t s_boiler_link = { .consecutive_fails = 0, .healthy = true };
 static bool s_hold_ch;
 static float s_hold_ch_c;
 static uint32_t s_promote_until[OT_CATALOG_MAX_IDS];
@@ -162,7 +161,7 @@ uint8_t ot_poll_get_slave_status_flags(void)
 
 bool ot_poll_boiler_link_healthy(void)
 {
-    return s_boiler_healthy;
+    return s_boiler_link.healthy;
 }
 
 void ot_poll_set_hold_ch_setpoint(bool enable, float celsius)
@@ -180,19 +179,13 @@ void ot_poll_promote(uint8_t data_id)
 
 static void note_keepalive(ot_exchange_result_t r)
 {
-    if (r == OT_EXCHANGE_OK || r == OT_EXCHANGE_INVALID) {
-        s_keepalive_fails = 0;
-        if (!s_boiler_healthy) {
-            s_boiler_healthy = true;
-            mqtt_ha_publish_boiler_link(true);
+    if (ot_boiler_link_fsm_note(&s_boiler_link, r, APP_BOILER_LINK_FAIL_THRESHOLD)) {
+        mqtt_ha_publish_boiler_link(s_boiler_link.healthy);
+        if (s_boiler_link.healthy) {
             ESP_LOGI(TAG, "boiler_link healthy");
-        }
-    } else {
-        s_keepalive_fails++;
-        if (s_keepalive_fails >= APP_BOILER_LINK_FAIL_THRESHOLD && s_boiler_healthy) {
-            s_boiler_healthy = false;
-            mqtt_ha_publish_boiler_link(false);
-            ESP_LOGW(TAG, "boiler_link unhealthy after %d fails", s_keepalive_fails);
+        } else {
+            ESP_LOGW(TAG, "boiler_link unhealthy after %d fails",
+                     s_boiler_link.consecutive_fails);
         }
     }
 }

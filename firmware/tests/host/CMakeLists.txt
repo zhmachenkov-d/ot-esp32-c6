@@ -54,6 +54,7 @@ add_host_test(test_provision_validate test_provision_validate.c)
 add_host_test(test_setpoint_bounds test_setpoint_bounds.c)
 add_host_test(test_mqtt_commands test_mqtt_commands.c)
 add_host_test(test_failsafe test_failsafe.c)
+add_host_test(test_boiler_link test_boiler_link.c)
 
 # Links real ot_poll.c (bus mutex) with host FreeRTOS/OpenTherm stubs — not the poll stub.
 add_executable(test_ot_poll_bus_lock

@@ -69,6 +69,9 @@ bool ot_catalog_resolve_bounds(const ot_catalog_t *cat, uint8_t id,
 
 bool ot_catalog_is_range_checked(uint8_t id);
 
+/** True if OpenTherm directory marks ID as master-write class (W or R/W), or ID 0 Status flags. */
+bool ot_catalog_is_directory_writable(uint8_t id);
+
 /** Persist / load via NVS blob helpers. */
 esp_err_t ot_catalog_save_nvs(const ot_catalog_t *cat);
 esp_err_t ot_catalog_load_nvs(ot_catalog_t *cat);
