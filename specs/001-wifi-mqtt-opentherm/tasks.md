@@ -282,3 +282,12 @@ Task: "Implement SetpointBounds resolution (prefer boiler limit IDs)"
 - [X] T057 Complete remaining T043/T048 evidence: capture measured free heap after OT+MQTT (≥ 64 KiB) on WeAct Mini and sign off HIL V1–V8 under `firmware/tests/hil/results/` (or record explicit hardware deferral with owner) per plan Constraints / SC-001–SC-005 (partial)
 - [X] T058 Add host tests for boiler-link consecutive-fail FSM (unhealthy after 3 keepalive/status failures only; healthy after one success; tiered catalog reads do not count) covering `firmware/main/ot_poll.c` `note_keepalive` behavior per FR-012, Constitution II (partial)
 - [X] T059 Fix `firmware/README.md` SoftAP security wording from **(open)** to **WPA2-PSK** (+ Setup PIN pointer) to match `contracts/softap-provisioning.md` and `provision_softap.c` (contradicts)
+
+---
+
+## Phase 10: Convergence
+
+**Purpose**: Close remaining gaps between checked-off Phase 9 work and current code vs spec/plan/constitution
+
+- [ ] T060 Drive MQTT state decode and WRITE-DATA encode from OpenTherm directory encoding class (`f8.8` / flag8 / packed u8 / …) instead of hardcoded ID allowlists in `firmware/main/main.c`, `firmware/main/mqtt_discovery.c`, and `firmware/main/mqtt_commands.c`; cover mandatory ID **17** and directory-writable f8.8 IDs (e.g. **16**, **23**, **24**, **58**); add host tests per FR-003, FR-004, US1/AC3, US2/AC1, data-model Encoding notes, Constitution II (partial)
+- [ ] T061 Align `firmware/tests/hil/v1_commissioning.md` SoftAP steps and expect with **WPA2-PSK** + serial **Setup PIN** (not open SoftAP) per FR-005, `contracts/softap-provisioning.md` (contradicts)
