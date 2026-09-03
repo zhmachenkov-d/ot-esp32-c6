@@ -1,0 +1,7 @@
+{
+  "id": 0,
+  "read_result": "ACK",
+  "writable": true,
+  "write_safe": true,
+  "projections": ["fault", "ch_active", "dhw_active", "flame", "ch_enable"]
+}

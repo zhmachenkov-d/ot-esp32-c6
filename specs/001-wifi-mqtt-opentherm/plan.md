@@ -20,17 +20,17 @@ Technical approach: native ESP-IDF app (C) with `sazanof/opentherm` (validate on
 
 **Storage**: ESP32 NVS namespaces for Wi‑Fi/MQTT credentials, SoftAP CH min/max fallbacks, OT discovery catalog cache, last-accepted CH setpoint, and device identity
 
-**Testing**: Host-side unit tests (Unity or CMocka via IDF/`idf.py` host tests where practical) for Data ID encoding, setpoint reject/clamp-not, catalog classification, MQTT discovery payload builders, and fail-safe state machine; on-device / HIL scripts for SoftAP commission, MQTT Discovery appearance, OT keepalive under load, and fail-safe (documented in quickstart.md)
+**Testing**: Host-side unit tests (**Unity** via IDF/`idf.py` host tests where practical) for Data ID encoding, setpoint reject/clamp-not, catalog classification, MQTT discovery payload builders, and fail-safe state machine; on-device / HIL scripts for SoftAP commission, MQTT Discovery appearance, OT keepalive under load, and fail-safe (documented in quickstart.md)
 
 **Target Platform**: WeAct ESP32-C6 Mini (ESP32-C6FH4), Wi‑Fi STA + SoftAP; physical OpenTherm adapter; operator LAN MQTT broker (e.g. HA Mosquitto); Home Assistant MQTT Discovery
 
 **Project Type**: Embedded firmware (single ESP-IDF application + components)
 
-**Performance Goals**: OT keepalive/status ≥1 cycle/s (SC-003); readable ID → HA within 5 s of successful OT read (SC-001); writable command → OT attempt + reflected state within 2 s (SC-002); fail-safe entered within 10 s of Wi‑Fi/MQTT loss (SC-004)
+**Performance Goals**: OT keepalive/status ≥1 cycle/s (SC-003); readable ID → HA within 5 s of successful OT read (SC-001); writable command → OT attempt + reflected state within 2 s (SC-002); fail-safe entered after **10 000 ms** sustained link-loss entry timer (SC-004)
 
-**Constraints**: No Zigbee / no OpenThread in delivered image (FR-007/008); SoftAP + button long-press re-provision only (FR-005); reject out-of-range CH setpoint with explicit signal (FR-013); HA messaging must not starve OT (FR-011); secrets never in git; flash/RAM within ESP32-C6FH4 (4 MB) headroom
+**Constraints**: No Zigbee / no OpenThread in delivered image (FR-007/008); SoftAP + button long-press re-provision only (FR-005); reject out-of-range writes for v1 range-checked IDs (**1**, **8** if available, **7**, **14**, **56**, **57**) with `ot/<N>/rejection` for every writable N (FR-004/013); fail-safe Option A (app availability online during 10 s entry timer; offline when active via publish and/or LWT+birth); HA messaging must not starve OT (FR-011); secrets never in git. **Resource budgets (soft, ESP32-C6FH4)**: application firmware `.bin` MUST stay **≤ 1.5 MiB** (PR SHOULD note size if **> 1.2 MiB**); after OT poll + MQTT connected, free heap MUST remain **≥ 64 KiB**. Record both in T043 / `idf.py size` (or equivalent).
 
-**Scale/Scope**: Single gateway, single boiler; Data IDs 0–127 discovery → full supported read/write HA exposure (not a fixed small subset); SoftAP settings UI; meta entities (availability, boiler-link health, setpoint rejection diagnostic)
+**Scale/Scope**: Single gateway, single boiler; Data IDs 0–127 discovery → full supported read/write HA exposure (not a fixed small subset); SoftAP settings UI; meta entities (availability, boiler-link health); range-checked rejection via MQTT status topic (optional HA diagnostic/`event` entity — not required for FR-013)
 
 ## Constitution Check
 

@@ -30,7 +30,7 @@ This repo includes it under `components/opentherm/` as a reference for protocol 
 | `setBoilerTemperature(°C)` | [Data ID 1 TSet](/opentherm/data-id-1-tset.md) |
 | `getBoilerTemperature()` | [Data ID 25 Tboiler](/opentherm/data-id-25-tboiler.md) |
 
-`OpenThermMessageID` enum in `OpenTherm.h` lists spec data IDs 0–127 for advanced reads/writes.
+`OpenThermMessageID` enum in `OpenTherm.h` lists spec data IDs 0–127 for advanced reads/writes — see [OpenTherm Data IDs](/opentherm/opentherm-data-ids.md).
 
 # Citations
 

@@ -1,0 +1,7 @@
+{
+  "id": 1,
+  "encoding": "f8.8",
+  "writable": true,
+  "write_safe": true,
+  "range_checked": true
+}

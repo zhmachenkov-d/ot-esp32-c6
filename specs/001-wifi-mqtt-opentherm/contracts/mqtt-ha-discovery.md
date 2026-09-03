@@ -24,11 +24,29 @@ State/command root: `otc6/<device_id>/` where `<device_id>` is stable (MAC-deriv
 | Item | Value |
 |------|-------|
 | Topic | `otc6/<device_id>/status` |
-| Birth | `online` (publish on connect, retained recommended) |
-| LWT | `offline` |
+| Birth | `online` (publish on connect, retained recommended) — **except** when fail-safe is already **active** (then birth/`status` MUST be `offline`) |
+| LWT | `offline` (broker-side on unclean disconnect; see fail-safe row — **application** policy is Option A) |
 | Entity field | `availability_topic` → above; `payload_available`=`online`; `payload_not_available`=`offline` |
 
 Boiler-link health MUST NOT reuse this topic as its only signal.
+
+**Fail-safe Option A (normative)**: On Wi‑Fi/MQTT link loss, start the **10 000 ms** entry timer. While the timer is running and fail-safe is **not** yet active, **application availability MUST be treated as `online`** for write-allowance purposes; if the client can reconnect before expiry, publish retained birth `online` and keep accepting remote writes. When fail-safe **becomes active**, application availability MUST **present as `offline`**: publish retained `offline` on `…/status` when the publish path is still usable; **when Wi‑Fi/MQTT is already down so a live publish cannot complete**, broker **LWT `offline`** plus **next-connect birth `offline`** (while fail-safe remains active) satisfy “present as offline.” Refuse remote writes once active. Broker LWT may transiently show `offline` during the disconnect itself; that MUST NOT by itself enter fail-safe or permanently refuse writes before timer expiry.
+
+---
+
+## Unavailable / invalid value sentinels
+
+Consistent operator-visible behavior when a value cannot be shown (constitution III):
+
+| Condition | MQTT / HA behavior |
+|-----------|-------------------|
+| Device MQTT `offline` (LWT / disconnect) | Entities using `availability_topic` become unavailable via HA availability — do not invent fresh OT values |
+| Boiler-link `unhealthy` | Keep publishing `boiler_link=unhealthy`; for Data ID state topics that have no valid last sample **or** whose last exchange failed after unhealthy threshold: publish state payload **empty string** (HA treats as unknown/unavailable). Do **not** publish fabricated numeric zeros |
+| `DATA-INVALID` / no valid decode yet | Same empty-string state on `ot/<N>/state` until a valid ACK sample exists; discovery entity may remain configured |
+| Fail-safe **active** (entry timer expired; Wi‑Fi or MQTT still down) | Application MQTT availability presents as `offline` (retained publish when usable; else LWT + next-connect birth); OT keepalive continues locally; commands → `ot/<N>/rejection` with `reason=rejected_failsafe`; reflected states stay last accepted (or empty if never accepted)—not false success |
+| Fail-safe **entry timer** running (link loss detected, not yet active) | Application availability remains **`online`** (Option A); remote writes still allowed; cancel timer if Wi‑Fi+MQTT recover before expiry (FR-006) |
+
+Do not use topic-specific one-off unavailable encodings. Empty string is the v1 sentinel for “no valid value” on per-ID state topics.
 
 ---
 
@@ -39,18 +57,20 @@ Boiler-link health MUST NOT reuse this topic as its only signal.
 - Topic: `homeassistant/binary_sensor/otc6_<device_id>_boiler_link/config`
 - Payload keys: `name`=Boiler link, `unique_id`=`otc6_<device_id>_boiler_link`, `state_topic`=`otc6/<device_id>/boiler_link`, `payload_on`=`healthy`, `payload_off`=`unhealthy`, `device_class`=`connectivity` (or none), shared `device` + `availability_topic`
 
-**State**: `healthy` | `unhealthy` per data-model threshold (default 3 consecutive OT failures).
+**State**: `healthy` | `unhealthy` per data-model threshold (default **3 consecutive failed keepalive/status** exchanges only; tiered catalog reads do not count).
 
 ---
 
 ## Per Data ID entities
 
+Default component choice follows the **Default HA component map** in `data-model.md` (encoding class → HA type). Summary:
+
 For each **available** readable ID `N`:
 
 | HA type | When |
 |---------|------|
-| `sensor` | Continuous / enumerated non-boolean |
-| `binary_sensor` | Flag / boolean readable |
+| `sensor` | Continuous numeric **or** whole-ID flag8/bitfield raw |
+| `binary_sensor` | Additive only for documented flag projections (e.g. Status bits)—not a substitute for omitting the per-ID entity |
 
 - Discovery: `homeassistant/<component>/otc6_<device_id>_ot_<N>/config`
 - `unique_id`: `otc6_<device_id>_ot_<N>`
@@ -62,12 +82,12 @@ For each **available writable** ID `N`:
 
 | HA type | When |
 |---------|------|
-| `number` | Numeric writable |
-| `switch` | Boolean / enable writable |
+| `number` | Continuous numeric writable, or raw flag8 write |
+| `switch` | Documented boolean / single-bit enable writable |
 
 - `command_topic`: `otc6/<device_id>/ot/<N>/set`
 - `state_topic`: `otc6/<device_id>/ot/<N>/state` (reflected accepted value)
-- For ID 1 `number`/`climate`: advertise `min`/`max` from effective `SetpointBounds`
+- For range-checked `number` entities: advertise `min`/`max` from effective bounds (ID **1** / **8**: `SetpointBounds`; others per FR-013 / data-model)
 
 ### Optional convenience climate (additive)
 
@@ -76,9 +96,9 @@ For each **available writable** ID `N`:
 
 ---
 
-## CH setpoint rejection signal
+## Command rejection signal (all writable Data IDs)
 
-**Topic** (status): `otc6/<device_id>/ot/1/rejection`  
+**Topic** (status): `otc6/<device_id>/ot/<N>/rejection`  
 **Payload** (JSON example):
 
 ```json
@@ -91,9 +111,15 @@ For each **available writable** ID `N`:
 }
 ```
 
-Optional: also discover `event` or diagnostic `binary_sensor` that toggles/pulses on reject so the operator sees an entity, not only a topic.
+`reason` values (v1): `out_of_range` (v1 **range-checked** writable IDs only — see below), `rejected_failsafe`, `ot_failed`. Fields `min`/`max` apply when `reason=out_of_range`; otherwise they MAY be omitted.
 
-**Invariant**: On reject, `otc6/<device_id>/ot/1/state` remains last accepted value (not the attempted out-of-range value).
+**v1 range-checked writable set** (reject-not-clamp when the ID is catalog-writable; skip range check if not writable/unsupported): **1**, **8** (only when ID 8 / CH2 is catalog-available), **7**, **14**, **56**, **57**. All other writable IDs: no gateway range gate in v1 (still publish `ot_failed` / `rejected_failsafe` as applicable). Bounds resolution: FR-013 / `data-model.md`.
+
+**Outcome → wire mapping** (internal `WritableCommand.outcome` → JSON `reason`): `rejected_range` → `out_of_range`; `rejected_failsafe` → `rejected_failsafe`; `ot_failed` → `ot_failed`.
+
+Optional: also discover `event` or diagnostic `binary_sensor` that toggles/pulses on reject so the operator sees an entity, not only a topic. **Not required for FR-004/FR-013** — the rejection status topic alone is the v1 bar.
+
+**Invariant**: On reject/failure, `otc6/<device_id>/ot/<N>/state` remains last accepted value (not the attempted rejected value; empty string if never accepted).
 
 ---
 
@@ -101,14 +127,15 @@ Optional: also discover `event` or diagnostic `binary_sensor` that toggles/pulse
 
 | Condition | Broker / HA observation |
 |-----------|-------------------------|
-| In-range writable, link OK | OT write attempted; state updates ≤2 s (SC-002) |
-| ID 1 out of range | No OT write; state unchanged; rejection payload published |
-| Fail-safe active | No remote writes applied; state unchanged / unavailable — not false success |
-| Boiler OT failure | No false success; boiler-link may go unhealthy after threshold |
+| In-range writable, fail-safe inactive | OT write **attempted**; state updates ≤2 s on success (SC-002) |
+| Range-checked ID (1, 8 if available, 7, 14, 56, 57) out of range | No OT write; state unchanged; `outcome=rejected_range`; publish `ot/<N>/rejection` with `reason=out_of_range` |
+| Fail-safe active | No remote writes applied (`outcome=rejected_failsafe`); application availability presents as `offline` (live publish and/or LWT + next-connect birth — Option A); publish `ot/<N>/rejection` with `reason=rejected_failsafe`; state unchanged — not false success |
+| Boiler-link unhealthy | **Still attempt** OT write; on failure → `outcome=ot_failed` + `ot/<N>/rejection` with `reason=ot_failed`; boiler-link may stay/become unhealthy per keepalive/status threshold only |
+| OT exchange failure (any link state) | No false success; reflected state unchanged; `outcome=ot_failed`; publish `ot/<N>/rejection` with `reason=ot_failed` |
 
 ---
 
 ## Retained writes on reconnect
 
-- After link-up debounce: apply **at most one** retained message on `ot/<1>/set` if present
+- After **2 s** link-up debounce (Wi‑Fi STA + MQTT both healthy continuously): apply **at most one** retained message on `ot/<1>/set` if present
 - Do not auto-apply retained messages for other `ot/<N>/set` topics

@@ -1,0 +1,121 @@
+#pragma once
+
+#include <stdbool.h>
+#include <stdint.h>
+
+#include "esp_err.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef enum {
+    OT_EXCHANGE_OK = 0,
+    OT_EXCHANGE_TIMEOUT,
+    OT_EXCHANGE_INVALID,
+    OT_EXCHANGE_UNKNOWN_ID,
+    OT_EXCHANGE_ERROR,
+} ot_exchange_result_t;
+
+typedef struct {
+    uint8_t data_id;
+    uint16_t request_value;
+    uint16_t response_value;
+    ot_exchange_result_t result;
+    bool is_write;
+} ot_exchange_t;
+
+struct ot_catalog;
+
+/** Init OpenTherm master on APP_OT_GPIO_IN/OUT (sazanof or Melnyk-port). */
+esp_err_t ot_poll_init(void);
+
+/**
+ * Single blocking exchange (read or write). Serialized by an internal bus mutex
+ * so discovery, the poll task, and other callers cannot interleave frames.
+ * Inter-frame gap is applied before releasing the mutex.
+ */
+ot_exchange_result_t ot_poll_exchange(ot_exchange_t *ex);
+
+/** Optional catalog pointer for tiered reads (nullable until discovery). */
+void ot_poll_set_catalog(struct ot_catalog *cat);
+
+/** Start keepalive + tiered poll FreeRTOS task. */
+esp_err_t ot_poll_start(void);
+
+/** Enqueue a write (serialized; never drops keepalive). Returns false if queue full. */
+bool ot_poll_enqueue_write(uint8_t data_id, uint16_t raw_value);
+
+/**
+ * Called after a queued WRITE-DATA exchange completes (success or bus failure).
+ * Enqueue alone MUST NOT be treated as accepted HA state.
+ */
+typedef void (*ot_write_complete_cb_t)(uint8_t data_id, uint16_t raw,
+                                       ot_exchange_result_t result, void *ctx);
+
+void ot_poll_set_write_complete_cb(ot_write_complete_cb_t cb, void *ctx);
+
+/**
+ * Called after each Status keepalive READ-DATA(id=0) completes (success or failure).
+ * Used to finalize pending CH-enable after the exchange that carries master flags.
+ */
+typedef void (*ot_status_complete_cb_t)(ot_exchange_result_t result, uint16_t status_raw,
+                                        void *ctx);
+
+void ot_poll_set_status_complete_cb(ot_status_complete_cb_t cb, void *ctx);
+
+/**
+ * ID 0 special: update pending master Status flags applied on next READ-DATA(id=0).
+ * Never uses WRITE-DATA(id=0).
+ */
+void ot_poll_set_master_status_flags(uint8_t master_hb);
+
+uint8_t ot_poll_get_master_status_flags(void);
+
+/** Last slave status LB from keepalive (valid if boiler-link has succeeded). */
+uint8_t ot_poll_get_slave_status_flags(void);
+
+bool ot_poll_boiler_link_healthy(void);
+
+/**
+ * Consecutive-fail boiler-link FSM for keepalive/status exchanges only.
+ * Tiered catalog reads MUST NOT call this. Returns true if healthy flipped.
+ */
+typedef struct {
+    int consecutive_fails;
+    bool healthy;
+} ot_boiler_link_fsm_t;
+
+static inline bool ot_boiler_link_fsm_note(ot_boiler_link_fsm_t *fsm,
+                                          ot_exchange_result_t r,
+                                          int fail_threshold)
+{
+    if (!fsm || fail_threshold < 1) {
+        return false;
+    }
+    bool changed = false;
+    if (r == OT_EXCHANGE_OK || r == OT_EXCHANGE_INVALID) {
+        fsm->consecutive_fails = 0;
+        if (!fsm->healthy) {
+            fsm->healthy = true;
+            changed = true;
+        }
+    } else {
+        fsm->consecutive_fails++;
+        if (fsm->consecutive_fails >= fail_threshold && fsm->healthy) {
+            fsm->healthy = false;
+            changed = true;
+        }
+    }
+    return changed;
+}
+
+/** Hold CH setpoint on the wire (fail-safe). */
+void ot_poll_set_hold_ch_setpoint(bool enable, float celsius);
+
+/** Promote Data ID to fast tier after write/change. */
+void ot_poll_promote(uint8_t data_id);
+
+#ifdef __cplusplus
+}
+#endif

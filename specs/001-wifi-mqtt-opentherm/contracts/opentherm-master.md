@@ -38,11 +38,13 @@ Probe domain: Data IDs 0–127. Persist + boot-validate in NVS.
 
 ## Command path
 
-1. Validate writable + bounds (ID 1) + not fail-safe  
-2. Enqueue serialized OT write  
+1. Validate catalog-writable; if Data ID is in the **v1 range-checked set** (see `mqtt-ha-discovery.md` / FR-013), check bounds → `rejected_range` / `out_of_range` on failure; refuse remote writes **only when `FailSafeState.active`** (entry timer running ≠ active — Option A: writes still allowed during the timer)
+2. Enqueue serialized OT command:
+   - Most IDs: `WRITE-DATA` (or write-class frame) with encoded value  
+   - **ID 0**: update pending master Status flags; apply on next Status **`READ-DATA(id=0)`** keepalive/exchange — **never** `WRITE-DATA(id=0)`  
 3. Reflect success/failure to MQTT state within SC-002 when attempt completes  
-4. Never report success if OT write did not occur
+4. Never report success if the OT command did not occur
 
 ## Fail-safe OT behavior
 
-While fail-safe active: continue keepalive/polling; hold last accepted CH setpoint on the wire per master Status/TSet policy; ignore new remote writes.
+While fail-safe **active** (`FailSafeState.active`): continue keepalive/polling; hold last accepted CH setpoint on the wire per master Status/TSet policy; **refuse** new remote writes (do not apply OT write) and require MQTT `ot/<N>/rejection` with `reason=rejected_failsafe` per FR-004/FR-013 — not a silent drop. During the **entry timer** (link loss detected, not yet active), OT command path remains open for remote writes.

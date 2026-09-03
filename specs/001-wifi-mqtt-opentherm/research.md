@@ -10,7 +10,7 @@ All Technical Context unknowns and integration choices resolved below. Sources: 
 
 ## 1. OpenTherm stack on ESP-IDF / ESP32-C6
 
-**Decision**: Use `sazanof/opentherm` (^1.0.3 / 1.0.7, MIT, IDF ≥ 5.2) as the primary OpenTherm master component; pin defaults **GPIO in=2 / out=3** on WeAct ESP32-C6 Mini (keeps USB Serial/JTAG on GPIO12/13 free). Treat ESP32-C6 as a **first validation milestone**: if framing/interrupts fail on C6, port Melnyk master timing onto ESP-IDF GPIO+`esp_timer` (same adapter pins) rather than pulling Arduino core.
+**Decision**: Use `sazanof/opentherm` (^1.0.3 / 1.0.7, MIT, IDF ≥ 5.2) as the primary OpenTherm master component; pin defaults **GPIO in=2 / out=3** on WeAct ESP32-C6 Mini (keeps USB Serial/JTAG on GPIO12/13 free). Treat ESP32-C6 as a **first validation milestone**: if framing/interrupts fail on C6, **stop treating T008 as done** and execute the Melnyk-port task (T008b): port Melnyk master timing onto ESP-IDF GPIO+`esp_timer` (same adapter pins) rather than pulling Arduino core. Do not proceed to user-story OT work on a broken master stack.
 
 **Rationale**: Native IDF dependency surface (driver + esp_timer only); already documented in OKF; helpers cover Status / TSet / Tboiler and broad `MSG_ID_*` set needed for full-catalog probing.
 
@@ -41,10 +41,13 @@ All Technical Context unknowns and integration choices resolved below. Sources: 
 
 1. Start from IDs with `support=available` after read probe.
 2. Mark `writable=true` only when **both** hold:
-   - The OpenTherm message directory / ID class marks the ID as master-writeable (write-data / write-flag class), **and**
-   - Either (a) the ID is in the **known write-safe set** (v1: ID 0 Status flags that include CH enable, ID 1 Control setpoint, plus any other IDs explicitly listed in `ot_catalog` fixtures as write-safe), **or** (b) a **safe write probe** succeeds: master write of the last-read raw value (or documented no-op bit pattern) returns ACK—never probe with invented setpoints or enable flips.
-3. If directory says non-writable, or write probe fails / is skipped outside the known set → `writable=false` (read entity only when available).
-4. Never fabricate HA write controls for unsupported IDs.
+   - The OpenTherm message directory / ID class marks the ID as master-controllable (write-data / write-flag class, **or** ID 0 master Status flags), **and**
+   - Either (a) the ID is in the **known write-safe set** (v1: **ID 0** Status master flags including CH enable, **ID 1** Control setpoint, plus any other IDs explicitly listed under `firmware/tests/host/fixtures/` as write-safe), **or** (b) a **safe write probe** succeeds: master write of the last-read raw value (or documented no-op bit pattern) returns ACK—never probe with invented setpoints or enable flips.
+3. **ID 0 special case (normative)**: Catalog `writable=true` for ID 0 means HA may command **master Status bits** (at least CH enable). The firmware applies those bits on the mandatory Status **`READ-DATA(id=0, master_status, …)`** exchange—**never** `WRITE-DATA(id=0)` (matches `knowledge/opentherm/data-id-0-status.md`). Safe-probe for ID 0 is N/A; treat as write-safe by fixture when Status ACK is observed.
+4. If directory says non-writable (and not ID 0), or write probe fails / is skipped outside the known set → `writable=false` (read entity only when available).
+5. Never fabricate HA write controls for unsupported IDs.
+
+**Host fixtures**: OpenTherm protocol-mandatory Data IDs **0, 1, 3, 14, 17, 25** MUST appear in `firmware/tests/host/fixtures/` for catalog/discovery coverage (read classification); writable flags still follow directory + write-safe rules above.
 
 **Rationale**: FR-015 + existing `discovery-catalog` knowledge; SC-007 needs a known set S on boiler/simulator.
 
@@ -60,14 +63,16 @@ All Technical Context unknowns and integration choices resolved below. Sources: 
 
 | Kind | HA component | Examples |
 |------|--------------|----------|
-| Gateway online | LWT + `availability_topic` on all entities | `otc6/<id>/status` → `online`/`offline` |
+| Gateway online | Application `availability_topic` + LWT; Option A fail-safe timing | `otc6/<id>/status` → `online`/`offline` |
 | Boiler-link health | `binary_sensor` | healthy / unhealthy |
-| Readable continuous | `sensor` | ID 25 Tboiler, pressures, modulation |
-| Readable flags | `binary_sensor` | flame, fault, CH active bits from ID 0 (when supported) |
-| Writable numeric | `number` (min/max/step) | generic writable floats/ints |
-| Writable boolean / enable | `switch` | CH enable path via Status write when supported |
+| Readable continuous | `sensor` | ID 25 Tboiler, pressures, modulation, u8/u16 codes |
+| Readable flag8 / bitfield (whole ID) | `sensor` (raw) **plus** additive `binary_sensor` for v1 Status bits | ID 0 Status raw entity always; projections: fault, CH/DHW active, flame, CH enable when supported |
+| Writable numeric | `number` (min/max/step) | generic writable floats/ints; raw flag8 write |
+| Writable boolean / enable | `switch` | CH enable via ID 0 master Status flags on Status exchange (not WRITE-DATA) |
 | CH water climate UX | optional convenience `climate` for ID 1 + related status | MUST NOT replace per-ID entities (FR-002) |
-| CH setpoint reject | `event` or `binary_sensor` diagnostic + status topic | explicit rejection signal (FR-013) |
+| Command reject / failure | status topic `otc6/<id>/ot/<N>/rejection` (required for every writable N) | topic alone satisfies FR-004/013; optional `event` / diagnostic entity is additive UX |
+
+Normative encoding→component defaults: `data-model.md` Default HA component map; contract summary in `contracts/mqtt-ha-discovery.md`.
 
 Publish retained discovery configs after catalog validation; re-publish on reconnect so HA restart recovers entities (HA MQTT discovery guidance).
 
@@ -83,20 +88,21 @@ Publish retained discovery configs after catalog validation; re-publish on recon
 ## 5. CH Control setpoint bounds and rejection
 
 **Decision**:
-- Effective **max**: boiler CH max-limit Data ID when available (commonly **ID 57**); else SoftAP/NVS value seeded from firmware default **90.0 °C**.
-- Effective **min**: boiler CH min-limit ID when offered; else SoftAP/NVS seeded from firmware default **10.0 °C**.
-- Out-of-range MQTT write: **reject** — no OT write, keep last-accepted reflected setpoint, publish explicit rejection (MQTT status/event payload with reason `out_of_range` + attempted value).
-- SoftAP UI persists operator fallback min/max (FR-014).
+- **v1 range-checked** writable IDs (reject-not-clamp when catalog-writable): **1**, **8** (iff ID 8 available), **7**, **14**, **56**, **57**.
+- **ID 1 / ID 8**: effective **max** prefers boiler **ID 57**; else SoftAP/NVS seeded **90.0 °C**. Effective **min**: SoftAP/NVS seeded **10.0 °C** (no standard OT CH lower-limit ID; fixture min-limit override only if listed).
+- **ID 56**: prefer slave **ID 48** UB/LB; else `app_config`/fixture. **ID 57**: prefer slave **ID 49** UB/LB; else `app_config`/fixture. **ID 7** / **ID 14**: **0..100** unless fixture override.
+- Out-of-range MQTT write on a range-checked ID: **reject** — no OT write, keep last-accepted reflected value, publish `otc6/<id>/ot/<N>/rejection` (`reason=out_of_range`). **Same `ot/<N>/rejection` pattern for every writable** on `rejected_failsafe` / `ot_failed`. Other writables: no gateway range gate.
+- SoftAP UI persists operator CH fallback min/max (FR-014) for ID 1/8 path.
 
-**Rationale**: Matches FR-013 clarifications; defaults are conventional CH water bounds and overridable.
+**Rationale**: Matches FR-013 analyze remediation; ID 57/48/49 are documented limit IDs in project knowledge.
 
-**Alternatives considered**: Silent clamp (rejected in clarify); HA-only min/max without reject signal (rejected).
+**Alternatives considered**: Silent clamp (rejected in clarify); ID-1-only range gate (superseded); HA-only min/max without reject signal (rejected).
 
 ---
 
 ## 6. Fail-safe and retained MQTT writes
 
-**Decision**: Wi‑Fi STA disconnect / lost-IP **or** MQTT client disconnect/error starts a fail-safe entry timer; if the combined link stays unhealthy, enter fail-safe within **10 s** (SC-004) — continue OT keepalive/polling; **hold last commanded CH setpoint** (ID 1); refuse **all** remote Data ID writes until link healthy (FR-006). Cancel the timer if Wi‑Fi and MQTT recover before expiry. On recovery: debounce link-up; **apply at most one retained CH setpoint (ID 1)** if present, then follow live commands; ignore retained storms for other writables (do not apply retained non-ID-1 commands automatically).
+**Decision**: Wi‑Fi STA disconnect / lost-IP **or** MQTT client disconnect/error starts a fail-safe **entry timer** of **10 000 ms** (default; `app_config`); if the combined link stays unhealthy when the timer expires, enter fail-safe (SC-004) — continue OT keepalive/polling; **hold last commanded CH setpoint** (ID 1); refuse **all** remote Data ID writes until link healthy (FR-006). **Writes remain allowed until fail-safe becomes active.** **Option A**: **application** availability on `otc6/<id>/status` stays **`online` during the entry timer**; when fail-safe **becomes active**, present as **`offline`** (retained publish when usable; **when publish path is dead**, LWT `offline` + next-connect birth `offline` while still active). Broker LWT alone MUST NOT enter fail-safe or permanently refuse writes before timer expiry; on reconnect before expiry, publish birth `online` and keep accepting writes. Cancel the timer if Wi‑Fi and MQTT recover before expiry. On recovery: require **2 s** continuous Wi‑Fi STA + MQTT healthy (**link-up debounce**); then **apply at most one retained CH setpoint (ID 1)** if present, then follow live commands; ignore retained storms for other writables (do not apply retained non-ID-1 commands automatically).
 
 **Rationale**: Spec Assumptions default; aligns with OTGateway-style emergency thinking without inventing new demand.
 
@@ -106,7 +112,7 @@ Publish retained discovery configs after catalog validation; re-publish on recon
 
 ## 7. SoftAP / captive portal and re-provision
 
-**Decision**: First boot (no credentials) and button-triggered re-provision: start SoftAP (e.g. `OTC6-XXXX`), DNS captive redirect to local HTTP UI (`esp_http_server`) collecting Wi‑Fi SSID/password, MQTT host/port/user/password, optional TLS toggle (off by default for trusted LAN), and CH min/max fallbacks. Persist to NVS; switch to STA; stop SoftAP. **Re-entry**: WeAct user button **GPIO9**, long-press **≥5 s** clears Wi‑Fi/MQTT credentials and forces SoftAP (FR-005). Sustained join/broker failure alone does **not** open SoftAP in v1.
+**Decision**: First boot (no credentials) and button-triggered re-provision: start SoftAP (e.g. `OTC6-XXXX`), **open** SoftAP (no WPA password in v1; physical presence on the SoftAP SSID is the access control), DNS captive redirect to local HTTP UI (`esp_http_server`) collecting Wi‑Fi SSID/password, MQTT host/port/user/password, optional TLS toggle (off by default for trusted LAN), and CH min/max fallbacks. Persist to NVS; switch to STA; stop SoftAP. **Re-entry**: WeAct user button **GPIO9**, long-press **≥5 s** clears Wi‑Fi/MQTT credentials and forces SoftAP (FR-005). Sustained join/broker failure alone does **not** open SoftAP in v1.
 
 **Rationale**: Spec clarifications; board has SW2 on IO9; 5 s reduces accidental wipe.
 
@@ -126,9 +132,9 @@ Publish retained discovery configs after catalog validation; re-publish on recon
 
 ## 9. Boiler-link health threshold
 
-**Decision**: Unhealthy after **3 consecutive failed** OT exchanges at ≥1 Hz keepalive/status cadence (or equivalent ~3 s window); healthy again after **one successful** keepalive/status exchange (FR-012). Distinct from MQTT LWT availability.
+**Decision**: Unhealthy after **3 consecutive failed** OT **keepalive/status** exchanges at ≥1 Hz cadence (**not** tiered catalog reads); healthy again after **one successful** keepalive/status exchange (FR-012). v1 uses consecutive count only (no separate time-window alternative). Distinct from MQTT LWT availability. **Unhealthy does not pre-reject MQTT writes** — still attempt OT (subject to fail-safe + FR-013 range checks); failure → `ot_failed` + `ot/<N>/rejection`, not a `rejected_link` gate (FR-004).
 
-**Rationale**: Clarification session default; avoids flapping on single glitch.
+**Rationale**: Clarification session default; avoids flapping on single glitch; keeps command path aligned with “observe non-success” rather than inventing a second refuse mode beside fail-safe.
 
 ---
 
@@ -162,8 +168,11 @@ Publish retained discovery configs after catalog validation; re-publish on recon
 | Storage | NVS |
 | Testing | Host unit + HIL/quickstart |
 | HA entity types | Table in §4 |
-| SoftAP / button | SoftAP portal; GPIO9 ≥5 s |
-| Fail-safe / retained | Hold last CH; refuse writes; ≤1 retained ID 1 after debounce |
+| SoftAP / button | **Open** SoftAP portal; GPIO9 ≥5 s |
+| Fail-safe / retained | Hold last CH; refuse writes after **10 s** entry timer; **Option A** app availability online during timer / offline when active (LWT+birth if publish dead); ≤1 retained ID 1 after **2 s** link-up debounce |
+| Rejection topics | `ot/<N>/rejection` for every writable N; range-check **1, 8** (if avail.), **7, 14, 56, 57** |
 | CH default min/max | 10.0 / 90.0 °C |
 | Topic namespace | `otc6/<device_id>/` |
+| Host fixtures | `firmware/tests/host/fixtures/`; mandatory IDs **0, 1, 3, 14, 17, 25** |
+| Boiler-link counting | Keepalive/status only |
 | Zigbee/Thread | Absent from design |

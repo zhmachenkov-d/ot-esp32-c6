@@ -1,0 +1,8 @@
+{
+  "ids": [
+    {"id": 3, "writable": false, "write_safe": false},
+    {"id": 14, "writable": true, "directory_writable": true, "write_safe": false, "probe_ok": true},
+    {"id": 17, "writable": false},
+    {"id": 25, "writable": false}
+  ]
+}
