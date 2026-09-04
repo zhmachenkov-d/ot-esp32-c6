@@ -3,6 +3,7 @@
 #include "app_config.h"
 #include "dns_server.h"
 #include "nvs_store.h"
+#include "ota_update.h"
 
 #include "esp_event.h"
 #include "esp_http_server.h"
@@ -366,6 +367,7 @@ esp_err_t provision_softap_start(const char *device_id)
     }
 
     s_active = true;
+    ota_update_set_softap_active(true);
     /* SoftAP PSK + setup PIN logged for serial commissioning. */
     ESP_LOGI(TAG,
              "SoftAP %s WPA2-PSK password=%s — join then open %s/ if portal does not pop up",
@@ -386,6 +388,7 @@ void provision_softap_stop(void)
         s_server = NULL;
     }
     s_active = false;
+    ota_update_set_softap_active(false);
 }
 
 static void button_task(void *arg)

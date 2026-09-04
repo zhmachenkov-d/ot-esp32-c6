@@ -13,6 +13,11 @@ if(NOT EXISTS "${UNITY_DIR}/src/unity.c")
   message(FATAL_ERROR "Unity not found at ${UNITY_DIR}; set IDF_PATH")
 endif()
 
+set(CJSON_DIR "$ENV{IDF_PATH}/components/json/cJSON")
+if(NOT EXISTS "${CJSON_DIR}/cJSON.c")
+  message(FATAL_ERROR "cJSON not found at ${CJSON_DIR}; set IDF_PATH")
+endif()
+
 set(MAIN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../main")
 
 add_compile_definitions(HOST_TEST=1)
@@ -20,6 +25,7 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/stubs
   ${MAIN_DIR}
   ${UNITY_DIR}/src
+  ${CJSON_DIR}
 )
 
 add_library(unity STATIC ${UNITY_DIR}/src/unity.c)
@@ -29,9 +35,12 @@ add_library(otc6_host STATIC
   ${MAIN_DIR}/failsafe.c
   ${MAIN_DIR}/ot_catalog.c
   ${MAIN_DIR}/provision_validate.c
+  ${MAIN_DIR}/ota_update.c
+  ${CJSON_DIR}/cJSON.c
   ${CMAKE_CURRENT_SOURCE_DIR}/host_catalog_nvs_stub.c
   ${CMAKE_CURRENT_SOURCE_DIR}/host_ot_poll_stub.c
   ${CMAKE_CURRENT_SOURCE_DIR}/stubs/mqtt_ha_stub.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/stubs/ota_install_stub.c
   ${CMAKE_CURRENT_SOURCE_DIR}/host_discovery_builders.c
   ${CMAKE_CURRENT_SOURCE_DIR}/host_commands_core.c
 )
@@ -55,6 +64,7 @@ add_host_test(test_setpoint_bounds test_setpoint_bounds.c)
 add_host_test(test_mqtt_commands test_mqtt_commands.c)
 add_host_test(test_failsafe test_failsafe.c)
 add_host_test(test_boiler_link test_boiler_link.c)
+add_host_test(test_ota_update test_ota_update.c)
 
 # Links real ot_poll.c (bus mutex) with host FreeRTOS/OpenTherm stubs — not the poll stub.
 add_executable(test_ot_poll_bus_lock

@@ -11,6 +11,7 @@ idf_component_register(
         "failsafe.c"
         "provision_softap.c"
         "provision_validate.c"
+        "ota_update.c"
     INCLUDE_DIRS "."
     REQUIRES
         nvs_flash
@@ -25,4 +26,7 @@ idf_component_register(
         opentherm
         dns_server
         mbedtls
+        app_update
+        esp_https_ota
+        esp_http_client
 )

@@ -192,3 +192,20 @@ esp_err_t mqtt_ha_publish_boiler_link(bool healthy)
     snprintf(topic, sizeof(topic), "%s%s/boiler_link", APP_MQTT_TOPIC_ROOT, s_device_id);
     return mqtt_ha_publish(topic, healthy ? "healthy" : "unhealthy", 1, true);
 }
+
+void mqtt_ha_update_state_topic(char *buf, size_t cap, const char *device_id)
+{
+    snprintf(buf, cap, "%s%s/update/state", APP_MQTT_TOPIC_ROOT, device_id);
+}
+
+void mqtt_ha_update_command_topic(char *buf, size_t cap, const char *device_id)
+{
+    snprintf(buf, cap, "%s%s/update/set", APP_MQTT_TOPIC_ROOT, device_id);
+}
+
+esp_err_t mqtt_ha_publish_update_state(const char *device_id, const char *json)
+{
+    char topic[96];
+    mqtt_ha_update_state_topic(topic, sizeof(topic), device_id);
+    return mqtt_ha_publish(topic, json ? json : "", 1, true);
+}

@@ -7,7 +7,17 @@
 
 #include <stdint.h>
 
-#define APP_FW_VERSION              "0.1.0"
+#define APP_FW_VERSION              "0.2.0"
+
+/* OTA — GitHub Releases manifest (public HTTPS CA; not MQTT broker CA) */
+#define OTA_FIRMWARE_ID             "otc6_gateway"
+#define OTA_GITHUB_REPO             "zhmachenkov-d/ot-esp32-c6"
+#define OTA_MANIFEST_URL \
+    "https://github.com/" OTA_GITHUB_REPO "/releases/latest/download/manifest.json"
+#define OTA_MANIFEST_POLL_INTERVAL_S    43200
+#define OTA_MANIFEST_MIN_INTERVAL_S     3600
+#define OTA_CONFIRM_TIMEOUT_MS          900000
+#define OTA_PAYLOAD_INSTALL             "install"
 
 /* OpenTherm adapter pins (WeAct ESP32-C6 Mini; keep USB Serial/JTAG on 12/13) */
 #define APP_OT_GPIO_IN              2
