@@ -25,13 +25,11 @@ cd firmware/tests/host
 
 ## Validation
 
-End-to-end scenarios: [`specs/001-wifi-mqtt-opentherm/quickstart.md`](../specs/001-wifi-mqtt-opentherm/quickstart.md).
-
 HIL checklists: `tests/hil/`.
 
 ## SoftAP commissioning
 
-Unconfigured boot → join SoftAP `OTC6-XXXX` (**WPA2-PSK**). The SoftAP password (16-hex PSK) and one-time **Setup PIN** are logged on USB serial when SoftAP starts — see [`contracts/softap-provisioning.md`](../specs/001-wifi-mqtt-opentherm/contracts/softap-provisioning.md). A captive portal should open automatically after you join.
+Unconfigured boot → join SoftAP `OTC6-XXXX` (**WPA2-PSK**). The SoftAP password (16-hex PSK) and one-time **Setup PIN** are logged on USB serial when SoftAP starts. A captive portal should open automatically after you join.
 
 If it does not, open **http://192.168.4.1/** in the phone/laptop browser while connected to the SoftAP. Portal save requires the Setup PIN from serial (not shown in the HTML form page body for silent reuse).
 
