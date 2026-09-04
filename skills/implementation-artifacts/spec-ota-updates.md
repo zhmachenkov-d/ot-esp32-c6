@@ -99,7 +99,7 @@ baseline_commit: 'd0debc9414920da56bfb470d5c77131ba11952ef'
 ## Implementation Notes
 
 - Slot size is `0x1F0000` (~1.91 MiB) per app partition because OTA app offsets must be 64 KiB-aligned on 4 MiB; size gate uses that slot − 256 KiB.
-- Host matrix coverage: manifest parse/reject, poll suppress, SoftAP/install reject, confirm/timeout, progress + abort state JSON, size-vs-slot (`test_ota_update` + discovery update config). Ran: `firmware/tests/host ./run.sh` 11/11.
+- Host matrix coverage: manifest parse/reject, poll suppress, SoftAP/install reject, confirm/timeout, progress + abort + reboot-handoff state JSON, SoftAP OTA gate wiring (`test_ota_update` + `test_provision_validate` + discovery update config). Ran: `firmware/tests/host ./run.sh` 11/11.
 - Hardware-only matrix rows (power-loss bootloader, reboot gap UX, live TLS/HTTP/sha256-on-device, e2e HA Install, confirm-timeout rollback on silicon) → `firmware/tests/hil/v10_ota.md` (not executed in this session).
 
 ## Spec Change Log
@@ -111,9 +111,9 @@ baseline_commit: 'd0debc9414920da56bfb470d5c77131ba11952ef'
 
 ## Review Triage Log
 
-- medium | patch | Manifest HTTPS GET runs synchronously on failsafe_task / SoftAP tick — stalls fail-safe up to HTTP timeout. Evidence: `poll_manifest_now` → `http_get_body` from `ota_update_tick` on failsafe loop.
-- medium | patch | Same root: concurrent session-ready + tick can race `poll_manifest_now` / `s_cache` without single-flight.
-- medium | patch | Pre-reboot retained state leaves `in_progress:true` (pct 100) across reboot gap until new image publishes.
+- medium | patch | Manifest HTTPS GET runs synchronously on failsafe_task / SoftAP tick — stalls fail-safe up to HTTP timeout. Evidence: `poll_manifest_now` → `http_get_body` from `ota_update_tick` on failsafe loop. **Fixed:** async `ota_poll` task + `s_poll_cancel` on fail-safe cancel; tick only schedules.
+- medium | patch | Same root: concurrent session-ready + tick can race `poll_manifest_now` / `s_cache` without single-flight. **Fixed:** `s_poll_inflight` + stamp `s_last_poll_ms` at schedule.
+- medium | patch | Pre-reboot retained state leaves `in_progress:true` (pct 100) across reboot gap until new image publishes. **Fixed:** `ota_progress_clear_in_flight` pre-reboot publish; MQTT-ready publishes idle state before poll.
 - medium | patch | `ota_manifest_parse` accepts non-semver `version` into cache; Design Notes require X.Y.Z — reject on parse.
 - medium | patch | `ota_build_state_json` snprintf optional fields lack remaining-capacity checks → buffer overrun risk.
 - medium | patch | State JSON interpolates title/summary/release_url without escaping quotes/backslashes.
@@ -124,7 +124,7 @@ baseline_commit: 'd0debc9414920da56bfb470d5c77131ba11952ef'
 - medium | patch | verification-gap: Install subscribe/route/retain compiled out under HOST_TEST — no host coverage.
 - medium | patch | verification-gap: size-gate `OTA_SLOT_BYTES` not tied to `partitions.csv`.
 - low | patch | sdkconfig.defaults comment still says ~1.96 MiB; slots are 0x1F0000 (~1.91 MiB).
-- medium | defer | SoftAP `ota_update_set_softap_active` call sites not in host harness — pure helpers covered; wiring needs HIL/harness.
+- medium | defer | SoftAP `ota_update_set_softap_active` call sites not in host harness — pure helpers covered; wiring needs HIL/harness. **Fixed:** `provision_softap_ota_gate` + host stub/`test_softap_ota_gate_wiring` (device start/stop still HIL).
 - low | defer | HIL v10 / live TLS/HTTP/sha256-on-device / e2e Install not executed this session.
 - low | defer | failsafe→`ota_update_cancel` path lacks dedicated host test.
 - false | reject | Updating `s_last_poll_ms` on fetch failure — intentional min-gap between attempts (policy B).

@@ -148,6 +148,24 @@ void test_state_json_after_abort(void)
     TEST_ASSERT_NULL(strstr(buf, "update_percentage"));
 }
 
+void test_state_json_reboot_handoff(void)
+{
+    /* Pre-reboot retained publish must clear in_progress after successful OTA. */
+    ota_progress_state_t st = { 0 };
+    strncpy(st.installed_version, "0.2.0", sizeof(st.installed_version) - 1);
+    strncpy(st.latest_version, "0.3.0", sizeof(st.latest_version) - 1);
+    st.in_progress = true;
+    st.has_percentage = true;
+    st.update_percentage = 100;
+    ota_progress_clear_in_flight(&st);
+    char buf[512];
+    TEST_ASSERT_TRUE(ota_build_state_json(buf, sizeof(buf), &st) > 0);
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"in_progress\":false"));
+    TEST_ASSERT_NULL(strstr(buf, "update_percentage"));
+    TEST_ASSERT_NULL(strstr(buf, "\"failed\""));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\"latest_version\":\"0.3.0\""));
+}
+
 void test_json_escape_quotes(void)
 {
     char esc[64];
@@ -190,6 +208,7 @@ int main(void)
     RUN_TEST(test_confirm_gate_and_timeout);
     RUN_TEST(test_state_json_progress);
     RUN_TEST(test_state_json_after_abort);
+    RUN_TEST(test_state_json_reboot_handoff);
     RUN_TEST(test_json_escape_quotes);
     RUN_TEST(test_size_fits_slot);
     RUN_TEST(test_install_topic);

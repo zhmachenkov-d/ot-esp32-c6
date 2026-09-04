@@ -101,6 +101,12 @@ bool provision_save_auth_consume(provision_save_auth_t *auth, const char *submit
 esp_err_t provision_softap_start(const char *device_id);
 void provision_softap_stop(void);
 
+/**
+ * SoftAP portal active ↔ OTA suppress flag (host-testable wiring contract).
+ * start/stop call this so Install/poll stay suppressed while provisioning.
+ */
+void provision_softap_ota_gate(bool portal_active);
+
 /** Start GPIO9 long-press monitor (≥5 s clears credentials + SoftAP). */
 esp_err_t provision_button_start(void);
 

@@ -361,6 +361,16 @@ int ota_build_state_json(char *buf, size_t cap, const ota_progress_state_t *st)
     return n;
 }
 
+void ota_progress_clear_in_flight(ota_progress_state_t *st)
+{
+    if (!st) {
+        return;
+    }
+    st->in_progress = false;
+    st->has_percentage = false;
+    st->failed = false;
+}
+
 bool ota_update_is_install_topic(const char *topic, const char *device_id)
 {
     if (!topic || !device_id) {
@@ -388,6 +398,7 @@ static ota_manifest_t s_cache;
 static TaskHandle_t s_ota_task;
 static TaskHandle_t s_poll_task;
 static bool s_poll_inflight;
+static bool s_poll_cancel;
 static int s_last_pub_pct = -1;
 static uint32_t s_last_pub_ms;
 
@@ -558,6 +569,10 @@ static void poll_manifest_now(uint32_t now_ms)
     int len = 0;
     esp_err_t err = http_get_body(OTA_MANIFEST_URL, &body, &len);
     s_last_poll_ms = now_ms;
+    if (s_poll_cancel) {
+        free(body);
+        return;
+    }
     if (err != ESP_OK || !body) {
         ESP_LOGW(TAG, "manifest fetch failed (%s)", esp_err_to_name(err));
         free(body);
@@ -570,6 +585,9 @@ static void poll_manifest_now(uint32_t now_ms)
         return;
     }
     free(body);
+    if (s_poll_cancel) {
+        return;
+    }
     apply_manifest(&m);
     ESP_LOGI(TAG, "manifest ok version=%s newer=%d", m.version,
              (int)ota_manifest_is_newer(&m, APP_FW_VERSION));
@@ -580,17 +598,22 @@ static void poll_manifest_task(void *arg)
     uint32_t now_ms = (uint32_t)(uintptr_t)arg;
     poll_manifest_now(now_ms);
     s_poll_inflight = false;
+    s_poll_cancel = false;
     s_poll_task = NULL;
     vTaskDelete(NULL);
 }
 
-/** Non-blocking: schedule one-shot poll task (single-flight). */
+/**
+ * Non-blocking: schedule one-shot poll task (single-flight).
+ * Fail-safe / SoftAP tick must never call http_get_body on their own stacks.
+ */
 static void schedule_manifest_poll(uint32_t now_ms)
 {
     if (s_poll_inflight || s_in_progress) {
         return;
     }
     s_poll_inflight = true;
+    s_poll_cancel = false;
     /* Stamp last attempt at schedule time so tick/session cannot race another poll. */
     s_last_poll_ms = now_ms;
     BaseType_t ok = xTaskCreate(poll_manifest_task, "ota_poll", 6144,
@@ -726,12 +749,20 @@ static void ota_task(void *arg)
         goto fail;
     }
 
-    /* Clear in_progress before reboot so retained state is not stuck true. */
+    /* Clear in_progress before reboot so retained MQTT is not stuck true. */
     s_in_progress = false;
     s_has_percentage = false;
     s_percentage = 100;
     s_failed = false;
-    ota_update_publish_state();
+    {
+        ota_progress_state_t st;
+        fill_progress(&st);
+        ota_progress_clear_in_flight(&st);
+        char json[768];
+        if (ota_build_state_json(json, sizeof(json), &st) >= 0) {
+            mqtt_ha_publish_update_state(s_device_id, json);
+        }
+    }
     ESP_LOGI(TAG, "OTA success — restarting");
     vTaskDelay(pdMS_TO_TICKS(500));
     esp_restart();
@@ -772,18 +803,20 @@ void ota_update_on_mqtt_session_ready(void)
         s_boot_ms_set = true;
     }
     try_confirm();
+    /* Publish immediately so reboot-gap retained in_progress:true is overwritten
+     * before a slow manifest poll returns. */
+    ota_update_publish_state();
     if (ota_should_poll_manifest(s_softap_active, s_in_progress || s_poll_inflight, true, true, now,
                                  s_last_poll_ms,
                                  (uint32_t)OTA_MANIFEST_POLL_INTERVAL_S * 1000u,
                                  (uint32_t)OTA_MANIFEST_MIN_INTERVAL_S * 1000u)) {
         schedule_manifest_poll(now);
-    } else {
-        ota_update_publish_state();
     }
 }
 
 void ota_update_tick(uint32_t now_ms, bool mqtt_session_ready)
 {
+    /* Confirm timeout + schedule-only poll — never HTTP on this (fail-safe) stack. */
     if (!s_boot_ms_set) {
         s_boot_ms = now_ms;
         s_boot_ms_set = true;
@@ -829,6 +862,7 @@ bool ota_update_in_progress(void)
 void ota_update_cancel(void)
 {
     s_cancel = true;
+    s_poll_cancel = true; /* abandon in-flight manifest apply after HTTP returns */
 }
 
 #endif /* !HOST_TEST */

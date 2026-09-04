@@ -95,6 +95,12 @@ bool ota_size_fits_slot(bool has_size, int64_t size, size_t slot_bytes);
 int ota_build_state_json(char *buf, size_t cap, const ota_progress_state_t *st);
 
 /**
+ * Clear in-flight flags for post-success publish before reboot (retained MQTT
+ * must not leave in_progress:true across the reboot gap).
+ */
+void ota_progress_clear_in_flight(ota_progress_state_t *st);
+
+/**
  * Escape src for a JSON string value (quotes/backslashes/controls).
  * Returns bytes written excluding NUL, or -1 on overflow/NULL.
  */
@@ -105,12 +111,12 @@ bool ota_update_is_install_topic(const char *topic, const char *device_id);
 /** Handle HA Install (fixed payload). Host builds provide a recording stub. */
 esp_err_t ota_update_handle_install(const char *payload);
 
+/** SoftAP provisioning: suppress poll and reject Install. Host builds stub. */
+void ota_update_set_softap_active(bool active);
+
 #ifndef HOST_TEST
 
 esp_err_t ota_update_init(const char *device_id);
-
-/** SoftAP provisioning: suppress poll and reject Install. */
-void ota_update_set_softap_active(bool active);
 
 /** Call when s_mqtt_session_ready becomes true (confirm + poll trigger). */
 void ota_update_on_mqtt_session_ready(void);
@@ -120,7 +126,10 @@ void ota_update_tick(uint32_t now_ms, bool mqtt_session_ready);
 
 bool ota_update_in_progress(void);
 
-/** Request cancel of in-flight OTA task (non-blocking; OT poll stays responsive). */
+/**
+ * Request cancel of in-flight OTA download and abandon in-flight manifest poll
+ * (non-blocking; safe from fail-safe task — HTTP stays off that path).
+ */
 void ota_update_cancel(void);
 
 /** Publish current update state JSON on MQTT. */
