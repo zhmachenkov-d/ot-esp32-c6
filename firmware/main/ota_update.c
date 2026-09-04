@@ -462,93 +462,73 @@ static void try_confirm(void)
     }
 }
 
+/* GitHub Releases uses multi-hop 302s to long signed asset URLs; open/fetch_headers
+ * does not auto-follow, and default HTTP buffers truncate Location / request lines. */
+#define OTA_HTTP_IO_BUF 4096
+
+typedef struct {
+    char *buf;
+    size_t len;
+    size_t cap;
+    bool overflow;
+} http_body_acc_t;
+
+static esp_err_t http_body_event(esp_http_client_event_t *evt)
+{
+    http_body_acc_t *acc = (http_body_acc_t *)evt->user_data;
+    if (!acc || evt->event_id != HTTP_EVENT_ON_DATA || evt->data_len <= 0) {
+        return ESP_OK;
+    }
+    if (acc->len + (size_t)evt->data_len > acc->cap) {
+        acc->overflow = true;
+        return ESP_FAIL;
+    }
+    memcpy(acc->buf + acc->len, evt->data, (size_t)evt->data_len);
+    acc->len += (size_t)evt->data_len;
+    return ESP_OK;
+}
+
 static esp_err_t http_get_body(const char *url, char **out_body, int *out_len)
 {
     *out_body = NULL;
     *out_len = 0;
+
+    char *buf = malloc(OTA_MANIFEST_BODY_MAX + 1);
+    if (!buf) {
+        return ESP_ERR_NO_MEM;
+    }
+    http_body_acc_t acc = {
+        .buf = buf,
+        .len = 0,
+        .cap = OTA_MANIFEST_BODY_MAX,
+        .overflow = false,
+    };
     esp_http_client_config_t cfg = {
         .url = url,
-        .timeout_ms = 15000,
+        .timeout_ms = 20000,
         .crt_bundle_attach = esp_crt_bundle_attach,
-        .keep_alive_enable = true,
+        .event_handler = http_body_event,
+        .user_data = &acc,
+        .buffer_size = OTA_HTTP_IO_BUF,
+        .buffer_size_tx = OTA_HTTP_IO_BUF,
+        .max_redirection_count = 10,
     };
     esp_http_client_handle_t client = esp_http_client_init(&cfg);
     if (!client) {
+        free(buf);
         return ESP_ERR_NO_MEM;
     }
-    esp_err_t err = esp_http_client_open(client, 0);
-    if (err != ESP_OK) {
-        esp_http_client_cleanup(client);
-        return err;
-    }
-    int content_length = esp_http_client_fetch_headers(client);
+    esp_err_t err = esp_http_client_perform(client);
     int status = esp_http_client_get_status_code(client);
-    if (status < 200 || status >= 300) {
-        esp_http_client_close(client);
+    if (err != ESP_OK || acc.overflow || status < 200 || status >= 300) {
+        ESP_LOGW(TAG, "HTTP GET failed err=%s status=%d overflow=%d len=%u",
+                 esp_err_to_name(err), status, (int)acc.overflow, (unsigned)acc.len);
+        free(buf);
         esp_http_client_cleanup(client);
-        return ESP_FAIL;
+        return (acc.overflow) ? ESP_ERR_INVALID_SIZE : ESP_FAIL;
     }
-
-    char *buf = NULL;
-    int total = 0;
-    if (content_length >= 0) {
-        if (content_length > OTA_MANIFEST_BODY_MAX) {
-            esp_http_client_close(client);
-            esp_http_client_cleanup(client);
-            return ESP_ERR_INVALID_SIZE;
-        }
-        buf = malloc((size_t)content_length + 1);
-        if (!buf) {
-            esp_http_client_close(client);
-            esp_http_client_cleanup(client);
-            return ESP_ERR_NO_MEM;
-        }
-        while (total < content_length) {
-            int r = esp_http_client_read(client, buf + total, content_length - total);
-            if (r < 0) {
-                free(buf);
-                esp_http_client_close(client);
-                esp_http_client_cleanup(client);
-                return ESP_FAIL;
-            }
-            if (r == 0) {
-                break;
-            }
-            total += r;
-        }
-    } else {
-        buf = malloc(OTA_MANIFEST_BODY_MAX + 1);
-        if (!buf) {
-            esp_http_client_close(client);
-            esp_http_client_cleanup(client);
-            return ESP_ERR_NO_MEM;
-        }
-        while (total < OTA_MANIFEST_BODY_MAX) {
-            int r = esp_http_client_read(client, buf + total, OTA_MANIFEST_BODY_MAX - total);
-            if (r < 0) {
-                free(buf);
-                esp_http_client_close(client);
-                esp_http_client_cleanup(client);
-                return ESP_FAIL;
-            }
-            if (r == 0) {
-                break;
-            }
-            total += r;
-        }
-        if (total >= OTA_MANIFEST_BODY_MAX) {
-            char probe;
-            int r = esp_http_client_read(client, &probe, 1);
-            if (r > 0) {
-                free(buf);
-                esp_http_client_close(client);
-                esp_http_client_cleanup(client);
-                return ESP_ERR_INVALID_SIZE;
-            }
-        }
-    }
+    int total = (int)acc.len;
     buf[total] = '\0';
-    esp_http_client_close(client);
     esp_http_client_cleanup(client);
     *out_body = buf;
     *out_len = total;
@@ -681,6 +661,9 @@ static void ota_task(void *arg)
         .timeout_ms = 30000,
         .crt_bundle_attach = esp_crt_bundle_attach,
         .keep_alive_enable = true,
+        .buffer_size = OTA_HTTP_IO_BUF,
+        .buffer_size_tx = OTA_HTTP_IO_BUF,
+        .max_redirection_count = 10,
     };
     esp_https_ota_config_t ota_cfg = {
         .http_config = &http_cfg,

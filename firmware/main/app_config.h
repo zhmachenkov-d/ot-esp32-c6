@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 
-#define APP_FW_VERSION              "0.2.0"
+#define APP_FW_VERSION              "0.2.2"
 
 /* OTA — GitHub Releases manifest (public HTTPS CA; not MQTT broker CA) */
 #define OTA_FIRMWARE_ID             "otc6_gateway"
