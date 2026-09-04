@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>OTA Spec Party — 2026-09-04</title>
+<style>
+  :root {
+    --ink: #1a1f2e;
+    --paper: #f4efe6;
+    --ember: #c45c26;
+    --teal: #2a6f6f;
+    --slate: #4a5568;
+    --card: #fffdf8;
+    --line: #d4cbb8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    background:
+      radial-gradient(ellipse at 20% 0%, #e8dcc8 0%, transparent 50%),
+      radial-gradient(ellipse at 90% 100%, #d4e4e0 0%, transparent 45%),
+      var(--paper);
+    color: var(--ink);
+    line-height: 1.45;
+    min-height: 100vh;
+  }
+  header {
+    padding: 2.5rem 1.5rem 1.5rem;
+    max-width: 52rem;
+    margin: 0 auto;
+    position: relative;
+  }
+  header svg.banner {
+    width: 100%;
+    max-width: 28rem;
+    display: block;
+    margin-bottom: 1rem;
+  }
+  h1 {
+    font-size: clamp(1.6rem, 4vw, 2.2rem);
+    font-weight: 700;
+    margin: 0 0 0.35rem;
+    letter-spacing: -0.02em;
+  }
+  .meta {
+    color: var(--slate);
+    font-size: 0.95rem;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+  }
+  .takeaways {
+    max-width: 52rem;
+    margin: 0 auto 2rem;
+    padding: 0 1.5rem;
+  }
+  .takeaways h2 {
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--teal);
+    margin-bottom: 0.75rem;
+  }
+  .takeaways ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 0.5rem;
+  }
+  .takeaways li {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--ember);
+    padding: 0.65rem 0.9rem;
+    font-size: 0.98rem;
+  }
+  .cast {
+    max-width: 52rem;
+    margin: 0 auto;
+    padding: 0 1.5rem 3rem;
+    display: grid;
+    gap: 0.85rem;
+  }
+  .cast h2 {
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--teal);
+    margin: 1.5rem 0 0.5rem;
+  }
+  article {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    padding: 0.9rem 1rem 1rem;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.75rem 1rem;
+    animation: rise 0.6s ease both;
+  }
+  article:nth-child(odd) { animation-delay: 0.05s; }
+  article:nth-child(even) { animation-delay: 0.12s; }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
+  }
+  .icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #f0e6d8, #e2d4c0);
+    display: grid;
+    place-items: center;
+    font-size: 1.25rem;
+    grid-row: span 2;
+  }
+  .who {
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+  .who span {
+    font-weight: 400;
+    color: var(--slate);
+    font-size: 0.8rem;
+  }
+  .line {
+    margin: 0;
+    font-style: italic;
+    color: var(--ink);
+  }
+  footer {
+    text-align: center;
+    padding: 1rem 1.5rem 2.5rem;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.8rem;
+    color: var(--slate);
+  }
+  .pulse {
+    transform-origin: 50% 50%;
+    animation: pulse 2.8s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.55; }
+    50% { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <svg class="banner" viewBox="0 0 420 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="8" y="28" width="52" height="36" rx="3" fill="#2a6f6f" opacity="0.85"/>
+      <rect x="66" y="28" width="52" height="36" rx="3" fill="#c45c26" class="pulse"/>
+      <path d="M60 46 H66" stroke="#1a1f2e" stroke-width="2"/>
+      <circle cx="34" cy="46" r="6" fill="#f4efe6"/>
+      <circle cx="92" cy="46" r="6" fill="#f4efe6"/>
+      <text x="140" y="42" font-family="Georgia, serif" font-size="18" fill="#1a1f2e">dual-slot · manifest · HA</text>
+      <text x="140" y="64" font-family="ui-sans-serif, sans-serif" font-size="11" fill="#4a5568">ot-esp32-c6 · party keepsake</text>
+      <path d="M380 20 l8 12 -8 12 -8-12 z" fill="#c45c26" opacity="0.7">
+        <animateTransform attributeName="transform" type="rotate" from="0 380 32" to="360 380 32" dur="12s" repeatCount="indefinite"/>
+      </path>
+    </svg>
+    <h1>The night the OTA spec grew teeth</h1>
+    <p class="meta">Denys Zhmachenkov · 2026-09-04 · installed cast · session mode</p>
+  </header>
+
+  <section class="takeaways">
+    <h2>What stuck</h2>
+    <ul>
+      <li>GitHub Releases + <code>manifest.json</code> poll — not URL-in-Install, not lab OTA CA.</li>
+      <li>Public CA roots; MQTT CA stays MQTT-only.</li>
+      <li>~1.96&nbsp;MiB dual slots; build gate slot − 256&nbsp;KiB.</li>
+      <li>HA state JSON: versions + mid-download progress; fixed <code>payload_install</code>.</li>
+      <li>Poll B: 12h + MQTT-up, 1h min gap; SoftAP / in-flight OTA suppress.</li>
+      <li>Confirm = <code>s_mqtt_session_ready</code>; 15&nbsp;min pending → restart → rollback.</li>
+    </ul>
+  </section>
+
+  <section class="cast">
+    <h2>Voices that moved the needle</h2>
+
+    <article>
+      <div class="icon">📋</div>
+      <div class="who">John <span>Product Manager</span></div>
+      <p class="line">“Job still works if the URL is a Release asset — we’re selling no USB, not a CDN.”</p>
+    </article>
+    <article>
+      <div class="icon">🏗️</div>
+      <div class="who">Winston <span>System Architect</span></div>
+      <p class="line">“Dual OTA doesn’t squeeze you — it reclaims the wasted half of the chip.”</p>
+    </article>
+    <article>
+      <div class="icon">💻</div>
+      <div class="who">Amelia <span>Senior Software Engineer</span></div>
+      <p class="line">“HA Install does not ship a firmware URL. Point me at the gate or I’ll invent one.”</p>
+    </article>
+    <article>
+      <div class="icon">🎨</div>
+      <div class="who">Sally <span>UX Designer</span></div>
+      <p class="line">“Silent Install is dead — progress, then the reboot gap, then the new version.”</p>
+    </article>
+    <article>
+      <div class="icon">📊</div>
+      <div class="who">Mary <span>Business Analyst</span></div>
+      <p class="line">“IMAGE_TRUST isn’t a cert choice — it’s a distribution contract.”</p>
+    </article>
+    <article>
+      <div class="icon">⚡</div>
+      <div class="who">Victor <span>Innovation Strategist</span></div>
+      <p class="line">“Without Secure Boot, GitHub Releases is convenience, not integrity — name it.”</p>
+    </article>
+    <article>
+      <div class="icon">🧪</div>
+      <div class="who">Murat <span>Test Architect</span></div>
+      <p class="line">“Hang-without-MQTT is P0: fifteen minutes, then restart, or the matrix is fiction.”</p>
+    </article>
+    <article>
+      <div class="icon">🔬</div>
+      <div class="who">Dr. Quinn <span>Problem Solver</span></div>
+      <p class="line">“AHA — two knobs: interval and min-gap, or reconnect storms write the story for you.”</p>
+    </article>
+    <article>
+      <div class="icon">🎨</div>
+      <div class="who">Maya <span>Design Thinking</span></div>
+      <p class="line">“Hobbyists mean GitHub when they say OTA — the CA has to follow the sentence.”</p>
+    </article>
+    <article>
+      <div class="icon">🎬</div>
+      <div class="who">Caravaggio <span>Presentation</span></div>
+      <p class="line">“Three boxes: device discovers, GitHub stores, HA only displays and triggers.”</p>
+    </article>
+    <article>
+      <div class="icon">🧠</div>
+      <div class="who">Carson <span>Brainstorming</span></div>
+      <p class="line">“YES AND — sticky-note schema, then optional fields for the night-owl Release author.”</p>
+    </article>
+    <article>
+      <div class="icon">📖</div>
+      <div class="who">Sophia <span>Storyteller</span></div>
+      <p class="line">“The myth shifted: from our seal on the bytes to the operator’s vouch for the link.”</p>
+    </article>
+  </section>
+
+  <footer>
+    Keepsake of a BMad party · artifact:
+    <code>skills/implementation-artifacts/spec-ota-updates.md</code>
+    · the room remembers.
+  </footer>
+</body>
+</html>

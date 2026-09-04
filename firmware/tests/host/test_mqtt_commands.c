@@ -14,6 +14,13 @@ void host_ot_poll_stub_set_status_result(ot_exchange_result_t r, uint16_t raw);
 void host_ot_poll_stub_set_auto_status_complete(bool enable);
 void host_ot_poll_stub_fire_status_complete(void);
 
+void host_mqtt_ha_reset_subscribes(void);
+int host_mqtt_ha_count_subscribe_substr(const char *substr);
+void host_mqtt_ha_inject_message(const char *topic, const char *payload, bool retain);
+void host_ota_install_reset(void);
+int host_ota_install_call_count(void);
+const char *host_ota_install_last_payload(void);
+
 static ot_catalog_t s_cat;
 
 void setUp(void)
@@ -31,6 +38,8 @@ void setUp(void)
     host_ot_poll_stub_set_write_result(OT_EXCHANGE_OK);
     host_ot_poll_stub_set_auto_status_complete(false);
     host_ot_poll_stub_set_status_result(OT_EXCHANGE_OK, 0x0100);
+    host_mqtt_ha_reset_subscribes();
+    host_ota_install_reset();
     mqtt_commands_set_time_ms(0);
     mqtt_commands_init("aabbccddeeff", &s_cat, 10.0f, 90.0f);
 }
@@ -150,6 +159,28 @@ void test_reconnect_rearms_retained_gate(void)
     TEST_ASSERT_TRUE(mqtt_commands_allow_inbound(1, true));
 }
 
+void test_subscribe_includes_update_set(void)
+{
+    host_mqtt_ha_reset_subscribes();
+    TEST_ASSERT_EQUAL(ESP_OK, mqtt_commands_start_subscriptions());
+    TEST_ASSERT_EQUAL(1, host_mqtt_ha_count_subscribe_substr("otc6/aabbccddeeff/update/set"));
+}
+
+void test_install_non_retained_invokes_handler(void)
+{
+    host_ota_install_reset();
+    host_mqtt_ha_inject_message("otc6/aabbccddeeff/update/set", "install", false);
+    TEST_ASSERT_EQUAL(1, host_ota_install_call_count());
+    TEST_ASSERT_EQUAL_STRING("install", host_ota_install_last_payload());
+}
+
+void test_install_retained_ignored(void)
+{
+    host_ota_install_reset();
+    host_mqtt_ha_inject_message("otc6/aabbccddeeff/update/set", "install", true);
+    TEST_ASSERT_EQUAL(0, host_ota_install_call_count());
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -164,5 +195,8 @@ int main(void)
     RUN_TEST(test_id0_ch_enable_ot_failed_reverts);
     RUN_TEST(test_post_recovery_retained_policy);
     RUN_TEST(test_reconnect_rearms_retained_gate);
+    RUN_TEST(test_subscribe_includes_update_set);
+    RUN_TEST(test_install_non_retained_invokes_handler);
+    RUN_TEST(test_install_retained_ignored);
     return UNITY_END();
 }

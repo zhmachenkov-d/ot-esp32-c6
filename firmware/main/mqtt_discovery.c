@@ -145,6 +145,25 @@ int mqtt_discovery_build_status_flag_binary(char *buf, size_t cap, const char *d
     return (m < 0) ? -1 : n + m;
 }
 
+int mqtt_discovery_build_update_config(char *buf, size_t cap, const char *device_id)
+{
+    int n = snprintf(buf, cap,
+                     "{\"name\":\"Firmware\",\"unique_id\":\"otc6_%s_fw\","
+                     "\"device_class\":\"firmware\","
+                     "\"state_topic\":\"%s%s/update/state\","
+                     "\"command_topic\":\"%s%s/update/set\","
+                     "\"payload_install\":\"%s\"",
+                     device_id,
+                     APP_MQTT_TOPIC_ROOT, device_id,
+                     APP_MQTT_TOPIC_ROOT, device_id,
+                     OTA_PAYLOAD_INSTALL);
+    if (n < 0 || (size_t)n >= cap) {
+        return -1;
+    }
+    int m = append_device_and_avail(buf, cap, n, device_id);
+    return (m < 0) ? -1 : n + m;
+}
+
 static void publish_config(const char *component, const char *object_id, const char *json)
 {
     char topic[160];
@@ -299,6 +318,11 @@ esp_err_t mqtt_discovery_publish_all(const char *device_id, const ot_catalog_t *
     if (mqtt_discovery_build_boiler_link_config(json, sizeof(json), device_id) > 0) {
         snprintf(object_id, sizeof(object_id), "otc6_%s_boiler_link", device_id);
         publish_config("binary_sensor", object_id, json);
+    }
+
+    if (mqtt_discovery_build_update_config(json, sizeof(json), device_id) > 0) {
+        snprintf(object_id, sizeof(object_id), "otc6_%s_fw", device_id);
+        publish_config("update", object_id, json);
     }
 
     for (int id = 0; id < OT_CATALOG_MAX_IDS; id++) {

@@ -62,6 +62,9 @@ int mqtt_discovery_build_status_flag_binary(char *buf, size_t cap, const char *d
                                             const char *object_suffix, const char *name,
                                             const char *state_topic);
 
+/** HA MQTT Discovery update entity (fixed payload_install; JSON state_topic). */
+int mqtt_discovery_build_update_config(char *buf, size_t cap, const char *device_id);
+
 #ifdef __cplusplus
 }
 #endif

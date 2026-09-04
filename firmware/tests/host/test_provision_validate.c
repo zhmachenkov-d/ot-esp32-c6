@@ -1,5 +1,9 @@
 #include "unity.h"
 #include "provision_softap.h"
+#include "ota_update.h"
+
+void host_ota_install_reset(void);
+bool host_ota_softap_is_active(void);
 
 void setUp(void) {}
 void tearDown(void) {}
@@ -167,6 +171,21 @@ void test_save_auth_accepts_valid_token_once(void)
     TEST_ASSERT_FALSE(provision_save_auth_consume(&auth, "a1b2c3d4"));
 }
 
+void test_softap_ota_gate_wiring(void)
+{
+    host_ota_install_reset();
+    TEST_ASSERT_FALSE(host_ota_softap_is_active());
+    provision_softap_ota_gate(true);
+    TEST_ASSERT_TRUE(host_ota_softap_is_active());
+    /* SoftAP active must suppress Install and manifest poll. */
+    TEST_ASSERT_FALSE(ota_should_start_install("0.2.0", "0.3.0", true, host_ota_softap_is_active(), false));
+    TEST_ASSERT_FALSE(ota_should_poll_manifest(host_ota_softap_is_active(), false, true, true, 1000, 0,
+                                               43200000, 3600000));
+    provision_softap_ota_gate(false);
+    TEST_ASSERT_FALSE(host_ota_softap_is_active());
+    TEST_ASSERT_TRUE(ota_should_start_install("0.2.0", "0.3.0", true, host_ota_softap_is_active(), false));
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -186,5 +205,6 @@ int main(void)
     RUN_TEST(test_softap_wifi_plan_virgin_calls_init);
     RUN_TEST(test_save_auth_rejects_missing_or_invalid_token);
     RUN_TEST(test_save_auth_accepts_valid_token_once);
+    RUN_TEST(test_softap_ota_gate_wiring);
     return UNITY_END();
 }

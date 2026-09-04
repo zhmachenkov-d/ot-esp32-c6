@@ -1,9 +1,15 @@
 #include "provision_softap.h"
 
 #include "app_config.h"
+#include "ota_update.h"
 
 #include <string.h>
 #include <stdio.h>
+
+void provision_softap_ota_gate(bool portal_active)
+{
+    ota_update_set_softap_active(portal_active);
+}
 
 provision_validate_result_t provision_validate(const provision_form_t *form)
 {

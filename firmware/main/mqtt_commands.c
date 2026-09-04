@@ -7,6 +7,7 @@
 #include "nvs_store.h"
 #include "ot_codec.h"
 #include "ot_poll.h"
+#include "ota_update.h"
 
 #include "esp_log.h"
 
@@ -346,6 +347,14 @@ static void on_mqtt_message(const char *topic, const char *payload, int len, boo
 {
     (void)len;
     (void)ctx;
+    if (ota_update_is_install_topic(topic, s_device_id)) {
+        if (retain) {
+            ESP_LOGI(TAG, "ignore retained Install");
+            return;
+        }
+        (void)ota_update_handle_install(payload);
+        return;
+    }
     uint8_t id;
     if (is_climate_mode_set(topic)) {
         id = 0;
@@ -398,6 +407,8 @@ esp_err_t mqtt_commands_start_subscriptions(void)
         }
     }
     snprintf(topic, sizeof(topic), "%s%s/climate/mode/set", APP_MQTT_TOPIC_ROOT, s_device_id);
+    mqtt_ha_subscribe(topic, 1);
+    mqtt_ha_update_command_topic(topic, sizeof(topic), s_device_id);
     mqtt_ha_subscribe(topic, 1);
     return ESP_OK;
 }

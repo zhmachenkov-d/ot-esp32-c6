@@ -7,6 +7,7 @@
 #include "ot_catalog.h"
 #include "ot_codec.h"
 #include "ot_poll.h"
+#include "ota_update.h"
 #include "provision_softap.h"
 
 #include "esp_event.h"
@@ -69,6 +70,7 @@ static void mqtt_session_tick(uint32_t now_ms)
     mqtt_discovery_publish_climate(s_cfg.device_id, s_cfg.ch_min_c, s_cfg.ch_max_c);
     mqtt_commands_start_subscriptions();
     s_mqtt_session_ready = true;
+    ota_update_on_mqtt_session_ready();
     ESP_LOGI(TAG, "MQTT session ready (discovery + subscribe after debounce)");
 }
 
@@ -124,6 +126,7 @@ static void failsafe_task(void *arg)
                 ot_poll_set_hold_ch_setpoint(true, live.last_accepted_ch_setpoint_c);
                 failsafe_set_held_ch(&s_failsafe, live.last_accepted_ch_setpoint_c);
             }
+            ota_update_cancel(); /* do not wedge OT/fail-safe on an in-flight download */
             ESP_LOGW(TAG, "fail-safe ACTIVE");
         } else if (!active && was_active) {
             ot_poll_set_hold_ch_setpoint(false, 0);
@@ -142,6 +145,7 @@ static void failsafe_task(void *arg)
             s_mqtt_session_armed = false;
             s_mqtt_session_ready = false;
         }
+        ota_update_tick(now, s_mqtt_session_ready);
         was_active = active;
         vTaskDelay(pdMS_TO_TICKS(200));
     }
@@ -180,6 +184,17 @@ static void state_publish_task(void *arg)
     }
 }
 
+static void ota_confirm_tick_task(void *arg)
+{
+    /* SoftAP / no-MQTT path: still honour pending-verify confirm timeout → rollback. */
+    (void)arg;
+    while (1) {
+        uint32_t now = xTaskGetTickCount() * portTICK_PERIOD_MS;
+        ota_update_tick(now, false);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}
+
 void app_main(void)
 {
     ESP_LOGI(TAG, "OTC6 gateway %s", APP_FW_VERSION);
@@ -196,11 +211,16 @@ void app_main(void)
     ot_poll_set_catalog(&s_catalog);
     ESP_ERROR_CHECK(ot_poll_start());
 
+    ESP_ERROR_CHECK(ota_update_init(s_cfg.device_id));
+
     if (!s_cfg.has_wifi_credentials || !s_cfg.has_mqtt_config) {
         ESP_LOGW(TAG, "no credentials — SoftAP provisioning");
         ESP_ERROR_CHECK(provision_softap_start(s_cfg.device_id));
+        xTaskCreate(ota_confirm_tick_task, "ota_tick", 3072, NULL, 3, NULL);
         return;
     }
+
+    ota_update_set_softap_active(false);
 
     if (wifi_sta_start() != ESP_OK) {
         ESP_LOGW(TAG, "STA join failed — staying up for retry/button");

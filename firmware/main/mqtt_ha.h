@@ -44,6 +44,13 @@ esp_err_t mqtt_ha_publish_boiler_link(bool healthy);
 /** Build status topic into buf: otc6/<device_id>/status */
 void mqtt_ha_status_topic(char *buf, size_t cap, const char *device_id);
 
+/** Build HA update state/command topics. */
+void mqtt_ha_update_state_topic(char *buf, size_t cap, const char *device_id);
+void mqtt_ha_update_command_topic(char *buf, size_t cap, const char *device_id);
+
+/** Publish retained update entity JSON on state_topic. */
+esp_err_t mqtt_ha_publish_update_state(const char *device_id, const char *json);
+
 #ifdef __cplusplus
 }
 #endif

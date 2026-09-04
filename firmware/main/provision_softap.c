@@ -366,6 +366,7 @@ esp_err_t provision_softap_start(const char *device_id)
     }
 
     s_active = true;
+    provision_softap_ota_gate(true);
     /* SoftAP PSK + setup PIN logged for serial commissioning. */
     ESP_LOGI(TAG,
              "SoftAP %s WPA2-PSK password=%s — join then open %s/ if portal does not pop up",
@@ -386,6 +387,7 @@ void provision_softap_stop(void)
         s_server = NULL;
     }
     s_active = false;
+    provision_softap_ota_gate(false);
 }
 
 static void button_task(void *arg)
