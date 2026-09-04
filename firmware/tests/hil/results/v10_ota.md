@@ -8,7 +8,7 @@ Manifest: `https://github.com/zhmachenkov-d/ot-esp32-c6/releases/latest/download
 | # | Case | Result | Notes |
 |---|------|--------|-------|
 | 1 | Happy path (HA Install → reboot → installed 0.2.2) | ✓ | Catalog wait ~3.5 min; GitHub 302 fix required; Install → reboot → 0.2.2. |
-| 2 | Bad asset / TLS (Install fails, slot stays A) | ☐ | |
+| 2 | Bad asset / TLS (Install fails, slot stays A) | ✓ | Temporary v0.2.3 manifest → missing `.bin`; serial `File not found(404)` / `ota begin failed: ESP_FAIL`; no reboot (stayed 0.2.2). |
 | 3 | Power loss mid-write → last valid boots | ☐ | |
 | 4 | Confirm timeout (~15 min) → rollback to A | ☐ | |
 | 5 | SoftAP: Install does not run | ☐ | |
