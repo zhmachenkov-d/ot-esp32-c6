@@ -6,7 +6,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(otc6_host_tests C)
 
-set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD 17)
 
 set(UNITY_DIR "$ENV{IDF_PATH}/components/unity/unity")
 if(NOT EXISTS "${UNITY_DIR}/src/unity.c")
