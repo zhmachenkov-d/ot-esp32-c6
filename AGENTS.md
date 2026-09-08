@@ -1,6 +1,3 @@
-<!-- bmad:context -->
-<!-- Verified 2026-09-04 against ecbda73. Managed by bmad-project-context; edits inside this block are replaced on refresh. Keep anything you want preserved outside the markers. -->
-
 ## ot-esp32-c6
 
 OpenTherm Wi‑Fi MQTT gateway for WeAct ESP32-C6 Mini (ESP-IDF ≥5.4 → Home Assistant MQTT Discovery). Firmware lives in `firmware/`; agent knowledge is the OKF bundle under `knowledge/` compiled from `wiki/raw/`. Cursor skills under `.cursor/skills/` (OKF, git-workflow, domain-modeling). Behavioral edit rules: `.cursor/rules/karpathy-guidelines.mdc`.
@@ -29,5 +26,3 @@ OpenTherm Wi‑Fi MQTT gateway for WeAct ESP32-C6 Mini (ESP-IDF ≥5.4 → Home 
 
 - Firmware C follows ESP-IDF (`-std=gnu17`). Keep host tests at C17 (`CMAKE_C_STANDARD 17` in `firmware/tests/host/CMakeLists.txt`) so they match.
 - App sources under `firmware/main/` are C only; do not introduce C++ there without an explicit decision.
-
-<!-- /bmad:context -->
