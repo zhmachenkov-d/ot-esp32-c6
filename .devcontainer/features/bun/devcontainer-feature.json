@@ -1,0 +1,14 @@
+{
+  "id": "bun",
+  "version": "1.0.0",
+  "name": "Bun",
+  "description": "Installs Bun (JavaScript runtime, bundler, and package manager)",
+  "options": {
+    "version": {
+      "type": "string",
+      "proposals": ["latest"],
+      "default": "latest",
+      "description": "Bun version to install ('latest' or e.g. '1.1.0')"
+    }
+  }
+}
