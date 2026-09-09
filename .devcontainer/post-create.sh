@@ -24,7 +24,7 @@ export PATH="${HOME}/.local/bin:${PATH}"
 if ! command -v aidlc >/dev/null 2>&1; then
   echo "Installing aidlc CLI..."
   curl -fsSL https://github.com/awslabs/aidlc-workflows/releases/latest/download/install.sh | sh
-  # export PATH="${HOME}/.local/bin:${PATH}"  
+  export PATH="${HOME}/.local/bin:${PATH}"  
 fi
 if ! command -v aidlc >/dev/null 2>&1; then
   echo "error: aidlc not found on PATH after install" >&2
