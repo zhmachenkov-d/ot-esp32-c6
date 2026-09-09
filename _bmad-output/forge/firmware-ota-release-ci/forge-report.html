@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Forge Report — firmware-ota-release-ci</title>
+<style>
+  :root {
+    --ink: #1a1510;
+    --parchment: #f3e6d0;
+    --edge: #c4a574;
+    --seal: #8b1a1a;
+    --seal-rim: #5c0f0f;
+    --ok: #2d5a27;
+    --muted: #5c4a3a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    background:
+      radial-gradient(ellipse at 20% 0%, #fff8ec 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 100%, #e8d4b8 0%, transparent 45%),
+      var(--parchment);
+    color: var(--ink);
+    padding: 2.5rem 1.25rem 3rem;
+  }
+  .sheet {
+    max-width: 42rem;
+    margin: 0 auto;
+    border: 2px solid var(--edge);
+    padding: 2rem 2rem 2.5rem;
+    background: rgba(255, 250, 240, 0.85);
+    box-shadow: 0 8px 28px rgba(60, 40, 20, 0.12);
+    position: relative;
+  }
+  h1 {
+    font-size: 1.55rem;
+    letter-spacing: 0.02em;
+    margin: 0 0 0.35rem;
+  }
+  .meta {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin-bottom: 1.5rem;
+  }
+  h2 {
+    font-size: 1.05rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--edge);
+    padding-bottom: 0.3rem;
+    margin: 1.6rem 0 0.7rem;
+  }
+  ul { margin: 0.4rem 0 0; padding-left: 1.2rem; }
+  li { margin: 0.35rem 0; line-height: 1.45; }
+  .personas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.85rem;
+    margin-top: 0.5rem;
+  }
+  .persona {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.92rem;
+    background: rgba(196, 165, 116, 0.18);
+    padding: 0.25rem 0.55rem;
+    border-radius: 2px;
+  }
+  .seal-wrap {
+    display: flex;
+    justify-content: center;
+    margin: 2rem 0 0.5rem;
+  }
+  .seal-label {
+    text-align: center;
+    font-size: 0.8rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ok);
+    font-weight: bold;
+  }
+  footer {
+    margin-top: 1.75rem;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+  <article class="sheet">
+    <h1>Forge Report</h1>
+    <p class="meta">
+      <strong>firmware-ota-release-ci</strong> · ot-esp32-c6<br/>
+      Goal: clarify done for OTA/release automation · Outcome: <strong>HARDENED</strong>
+    </p>
+
+    <h2>Outcome</h2>
+    <p>
+      Idea narrowed from “add OTA” to <strong>CI/release automation only</strong>:
+      tag-driven Release assets for the existing device OTA contract, plus a PR/<code>main</code> host-tests workflow.
+    </p>
+
+    <h2>Locked decisions</h2>
+    <ul>
+      <li>No device OTA feature changes; keep dual-slot / HA / manifest contract.</li>
+      <li>Trigger: push strict <code>vX.Y.Z</code> → build (+ size gate) → draft → upload assets → publish.</li>
+      <li>Version: tag wins (CI injects); binary and manifest match the tag.</li>
+      <li>Assets: <code>otc6_gateway.bin</code> + generated <code>manifest.json</code> with version, url, sha256, size, release_url.</li>
+      <li>Host tests: every PR to <code>main</code> and every push to <code>main</code>; not a tag gate.</li>
+    </ul>
+
+    <h2>Rejected</h2>
+    <ul>
+      <li>Release-event trigger; publish-before-assets.</li>
+      <li>Match-or-fail / honor-system version policies.</li>
+      <li>Prerelease / suffixed-tag OTA channel.</li>
+      <li>Host tests as release gate; release-pipeline-only done.</li>
+    </ul>
+
+    <h2>Weak points that survived</h2>
+    <ul>
+      <li>A bad <code>main</code> can still be tagged and published (tests don’t gate tags).</li>
+      <li>Local/dev <code>APP_FW_VERSION</code> may never match any Release.</li>
+    </ul>
+
+    <h2>Pressure-tested by</h2>
+    <div class="personas">
+      <span class="persona">📋 John — Product Manager</span>
+      <span class="persona">🏗️ Winston — System Architect</span>
+      <span class="persona">💻 Amelia — Senior Engineer</span>
+      <span class="persona">🔒 Vex — Security</span>
+      <span class="persona">🚢 Dana — Pragmatist</span>
+      <span class="persona">🛑 Killjoy — Loop Stopper</span>
+      <span class="persona">📏 Level — Claim Checker</span>
+      <span class="persona">🌶️ Boundary — Edge Cases</span>
+      <span class="persona">Rina — Solo release operator</span>
+      <span class="persona">Kai — CI gatekeeper</span>
+      <span class="persona">Nora — Release librarian</span>
+    </div>
+
+    <div class="seal-wrap" aria-hidden="true">
+      <svg width="160" height="160" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="wax" cx="40%" cy="35%" r="65%">
+            <stop offset="0%" stop-color="#b83232"/>
+            <stop offset="55%" stop-color="#8b1a1a"/>
+            <stop offset="100%" stop-color="#5c0f0f"/>
+          </radialGradient>
+        </defs>
+        <circle cx="80" cy="80" r="72" fill="url(#wax)" stroke="#3d0a0a" stroke-width="3"/>
+        <circle cx="80" cy="80" r="62" fill="none" stroke="#e8c4a0" stroke-width="1.5" opacity="0.7"/>
+        <circle cx="80" cy="80" r="56" fill="none" stroke="#e8c4a0" stroke-width="0.8" opacity="0.45"/>
+        <text x="80" y="74" text-anchor="middle" fill="#f5e6d3" font-family="Georgia, serif" font-size="14" font-weight="bold" letter-spacing="2">HARDENED</text>
+        <text x="80" y="94" text-anchor="middle" fill="#e8c4a0" font-family="Georgia, serif" font-size="9" letter-spacing="1.5">FORGE SEAL</text>
+      </svg>
+    </div>
+    <p class="seal-label">Idea hardened</p>
+
+    <footer>
+      Handoff: <code>forged-idea.md</code> in this folder.
+      Session: <code>_bmad-output/forge/firmware-ota-release-ci/</code>
+    </footer>
+  </article>
+</body>
+</html>
