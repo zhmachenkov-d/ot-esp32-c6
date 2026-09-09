@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Shell(aidlc engine *)",
-      "Shell(bun *)"
-    ],
-    "deny": []
-  }
-}
