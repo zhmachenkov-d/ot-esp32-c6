@@ -30,6 +30,9 @@
 #define APP_SOFTAP_BUTTON_GPIO      9
 #define APP_SOFTAP_LONG_PRESS_MS    5000
 
+/* WeAct Mini onboard WS2812 status LED */
+#define APP_STATUS_LED_GPIO         8
+
 /* SoftAP / CH setpoint fallback seeds (°C) */
 #define APP_CH_MIN_C_DEFAULT        10.0f
 #define APP_CH_MAX_C_DEFAULT        90.0f

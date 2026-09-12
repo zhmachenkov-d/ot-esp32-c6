@@ -9,6 +9,7 @@
 #include "ot_poll.h"
 #include "ota_update.h"
 #include "provision_softap.h"
+#include "status_led.h"
 
 #include "esp_event.h"
 #include "esp_heap_caps.h"
@@ -210,6 +211,13 @@ void app_main(void)
     ot_catalog_init(&s_catalog);
     ot_poll_set_catalog(&s_catalog);
     ESP_ERROR_CHECK(ot_poll_start());
+
+    {
+        esp_err_t led_err = status_led_init();
+        if (led_err != ESP_OK) {
+            ESP_LOGE(TAG, "status_led_init failed: %s", esp_err_to_name(led_err));
+        }
+    }
 
     ESP_ERROR_CHECK(ota_update_init(s_cfg.device_id));
 

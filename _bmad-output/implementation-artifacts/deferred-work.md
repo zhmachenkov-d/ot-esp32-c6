@@ -15,3 +15,12 @@
 - source_spec: /workspaces/ot-esp32-c6/_bmad-output/implementation-artifacts/spec-firmware-ota-release-ci.md
   summary: Ancestry/tag-gate PR harness reclaimed via check-release-tag.sh --self-test (party 2B)
   evidence: Extracted tag shape + merge-base ancestry; host-tests runs self-test; release.yml calls script
+- source_spec: `_bmad-output/specs/spec-status-led-colors/stories/1-ws2812-bring-up-on-io8.md`
+  summary: SoftAP early-return status_led_init placement has no automated check against main.c sequencing
+  evidence: verification-gap — host tests do not link main.c; moving init below SoftAP return would leave SoftAP boots dark while ./run.sh stays green
+- source_spec: `_bmad-output/specs/spec-status-led-colors/stories/1-ws2812-bring-up-on-io8.md`
+  summary: bring-up-ladder.md needs exclusive boolean predicates over bind flags (story 2)
+  evidence: informal else/highest-wins rungs can overlap; story 1 excludes ladder evaluation
+- source_spec: `_bmad-output/specs/spec-status-led-colors/stories/1-ws2812-bring-up-on-io8.md`
+  summary: Document ESP32-C6 GPIO8 bootstrap/strapping constraint for status LED pin
+  evidence: onboard WS2812 uses a bootstrap pin; future early-init or pin changes need that recorded

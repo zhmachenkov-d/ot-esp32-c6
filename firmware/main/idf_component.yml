@@ -6,3 +6,5 @@ dependencies:
     version: "^1.0.3"
   espressif/mqtt:
     version: "^1.0.0"
+  espressif/led_strip:
+    version: "^2.5.0"

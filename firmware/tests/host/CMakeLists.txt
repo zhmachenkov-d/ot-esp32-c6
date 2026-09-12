@@ -66,6 +66,14 @@ add_host_test(test_failsafe test_failsafe.c)
 add_host_test(test_boiler_link test_boiler_link.c)
 add_host_test(test_ota_update test_ota_update.c)
 
+# Pure phase helpers only (HOST_TEST stubs hardware path in status_led.c).
+add_executable(test_status_led
+  test_status_led.c
+  ${MAIN_DIR}/status_led.c
+)
+target_link_libraries(test_status_led unity m)
+add_test(NAME test_status_led COMMAND test_status_led)
+
 # Links real ot_poll.c (bus mutex) with host FreeRTOS/OpenTherm stubs — not the poll stub.
 add_executable(test_ot_poll_bus_lock
   test_ot_poll_bus_lock.c
