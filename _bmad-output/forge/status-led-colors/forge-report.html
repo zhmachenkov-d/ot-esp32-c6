@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Forge Report — status-led-colors</title>
+<style>
+  :root {
+    --ink: #1a1510;
+    --parchment: #f3e6d0;
+    --edge: #c4a574;
+    --seal: #2d5a27;
+    --seal-rim: #1a3a18;
+    --ok: #2d5a27;
+    --muted: #5c4a3a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    background:
+      radial-gradient(ellipse at 20% 0%, #fff8ec 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 100%, #e8d4b8 0%, transparent 45%),
+      var(--parchment);
+    color: var(--ink);
+    padding: 2.5rem 1.25rem 3rem;
+  }
+  .sheet {
+    max-width: 42rem;
+    margin: 0 auto;
+    border: 2px solid var(--edge);
+    padding: 2rem 2rem 2.5rem;
+    background: rgba(255, 250, 240, 0.85);
+    box-shadow: 0 8px 28px rgba(60, 40, 20, 0.12);
+  }
+  h1 { font-size: 1.55rem; letter-spacing: 0.02em; margin: 0 0 0.35rem; }
+  .meta { color: var(--muted); font-size: 0.95rem; margin-bottom: 1.5rem; }
+  h2 {
+    font-size: 1.05rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--edge);
+    padding-bottom: 0.3rem;
+    margin: 1.6rem 0 0.7rem;
+  }
+  ul { margin: 0.4rem 0 0; padding-left: 1.2rem; }
+  li { margin: 0.35rem 0; line-height: 1.45; }
+  .personas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.85rem;
+    margin-top: 0.5rem;
+  }
+  .persona {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.92rem;
+    background: rgba(196, 165, 116, 0.18);
+    padding: 0.25rem 0.55rem;
+    border-radius: 2px;
+  }
+  .seal-wrap { display: flex; justify-content: center; margin: 2rem 0 0.5rem; }
+  .seal-label {
+    text-align: center;
+    font-weight: bold;
+    letter-spacing: 0.2em;
+    color: var(--ok);
+    font-size: 0.85rem;
+    margin-bottom: 0.25rem;
+  }
+  .outcome {
+    text-align: center;
+    font-size: 1.1rem;
+    color: var(--ok);
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+  }
+</style>
+</head>
+<body>
+  <div class="sheet">
+    <h1>Status LED bring-up ladder</h1>
+    <p class="meta">ot-esp32-c6 · forge session <code>status-led-colors</code> · goal: harden</p>
+
+    <div class="seal-wrap">
+      <svg width="140" height="140" viewBox="0 0 140 140" aria-label="HARDENED seal">
+        <circle cx="70" cy="70" r="62" fill="#2d5a27"/>
+        <circle cx="70" cy="70" r="54" fill="none" stroke="#f3e6d0" stroke-width="3"/>
+        <circle cx="70" cy="70" r="48" fill="none" stroke="#f3e6d0" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <text x="70" y="66" text-anchor="middle" fill="#f3e6d0" font-family="Georgia, serif" font-size="14" font-weight="bold" letter-spacing="2">HARDENED</text>
+        <text x="70" y="86" text-anchor="middle" fill="#c8e0c4" font-family="Georgia, serif" font-size="9" letter-spacing="1">FORGE SEAL</text>
+      </svg>
+    </div>
+    <p class="seal-label">OUTCOME</p>
+    <p class="outcome">HARDENED — ready for planning / build</p>
+
+    <h2>Locked decisions</h2>
+    <ul>
+      <li>Job: commissioning ladder (“how far did bring-up get”), live recompute every tick.</li>
+      <li>SoftAP &gt; critical &gt; remaining ladder rungs.</li>
+      <li>Critical: fail-safe active, or TLS-on/no-CA (<code>PROVISION_BOOT_RUN_NO_MQTT</code>), or OTA live <code>s_failed</code>.</li>
+      <li>Near-top: session-ready×OT-healthy matrix; top = both true.</li>
+      <li>Full ladder + color/pattern map (magenta/red/orange/yellow/cyan blink; blue/purple/green solid).</li>
+      <li>IO8 WS2812; 1 Hz slow / 4 Hz fast; dim ~10–20%.</li>
+    </ul>
+
+    <h2>Rejected</h2>
+    <ul>
+      <li>LED as separate live-health dashboard (not a bring-up ladder).</li>
+      <li>Sticky post-rollback / pending-verify critical in v1.</li>
+      <li>High-water mark after first success.</li>
+    </ul>
+
+    <h2>Surviving weak points</h2>
+    <ul>
+      <li>Hue-only discrimination is weak for some color vision; rely on blink vs solid.</li>
+      <li>Confirm how long OTA <code>s_failed</code> stays asserted when implementing.</li>
+    </ul>
+
+    <h2>Personas</h2>
+    <div class="personas">
+      <span class="persona">🎨 Sally — UX / glanceability</span>
+      <span class="persona">🏗️ Winston — bind to existing flags</span>
+      <span class="persona">💻 Amelia — firmware bindings &amp; defaults</span>
+      <span class="persona">📋 John — SoftAP as first stuck point</span>
+      <span class="persona">😤 Grumbal — no undefined “critical”</span>
+      <span class="persona">🚢 Dana — ship 80%, no RGB bikeshed</span>
+      <span class="persona">🔒 Vex — no invented rollback LED</span>
+      <span class="persona">📏 Level — evidence on OTA claims</span>
+      <span class="persona">🌶️ Boundary — 2×2 near-top edges</span>
+      <span class="persona">🔧 Kai — field installer (generated)</span>
+      <span class="persona">🏠 Lena — HA commissioner (generated)</span>
+    </div>
+  </div>
+</body>
+</html>

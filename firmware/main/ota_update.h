@@ -126,6 +126,9 @@ void ota_update_tick(uint32_t now_ms, bool mqtt_session_ready);
 
 bool ota_update_in_progress(void);
 
+/** Live OTA failure flag (clears on success / new attempt / cold boot). */
+bool ota_update_failed(void);
+
 /**
  * Request cancel of in-flight OTA download and abandon in-flight manifest poll
  * (non-blocking; safe from fail-safe task — HTTP stays off that path).

@@ -12,6 +12,8 @@ idf_component_register(
         "provision_softap.c"
         "provision_validate.c"
         "ota_update.c"
+        "status_led.c"
+        "status_led_ladder.c"
     INCLUDE_DIRS "."
     REQUIRES
         nvs_flash
@@ -29,6 +31,7 @@ idf_component_register(
         app_update
         esp_https_ota
         esp_http_client
+        led_strip
 )
 
 # Optional CI inject: idf.py -DAPP_FW_VERSION=X.Y.Z build (tag without leading v).

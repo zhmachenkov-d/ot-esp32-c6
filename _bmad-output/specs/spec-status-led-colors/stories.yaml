@@ -1,0 +1,24 @@
+- id: "1"
+  title: WS2812 bring-up on IO8
+  description: >-
+    Drive the WeAct Mini WS2812 on IO8 at ~10–20% brightness with solid,
+    1 Hz slow blink, and 4 Hz fast blink primitives (SPEC hardware constraints).
+    No bring-up ladder or subsystem flag binding in this story.
+  spec_checkpoint: false
+  done_checkpoint: true
+- id: "2"
+  title: Host-testable bring-up ladder evaluator
+  description: >-
+    Pure mapping from SoftAP, critical conditions, and bind flags to the
+    active rung and color/pattern in bring-up-ladder.md (CAP-1 and CAP-2 logic).
+    No GPIO or firmware tick wiring.
+  spec_checkpoint: false
+  done_checkpoint: true
+- id: "3"
+  title: Live status LED bind in firmware
+  description: >-
+    Each evaluation tick, read existing SoftAP / fail-safe /
+    PROVISION_BOOT_RUN_NO_MQTT / OTA failed and ladder bind flags, run the
+    evaluator, and drive the WS2812 (CAP-1 and CAP-2 end-to-end).
+  spec_checkpoint: false
+  done_checkpoint: true
