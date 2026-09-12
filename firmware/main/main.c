@@ -10,6 +10,7 @@
 #include "ota_update.h"
 #include "provision_softap.h"
 #include "status_led.h"
+#include "status_led_ladder.h"
 
 #include "esp_event.h"
 #include "esp_heap_caps.h"
@@ -35,8 +36,27 @@ static bool s_got_ip;
 static bool s_mqtt_session_armed;
 static bool s_mqtt_session_ready;
 static uint32_t s_mqtt_session_since_ms;
+/** Sticky for process life when boot selects PROVISION_BOOT_RUN_NO_MQTT. */
+static bool s_provision_boot_run_no_mqtt;
 
 #define WIFI_OK_BIT BIT0
+
+static void status_led_bind_tick(void)
+{
+    status_led_ladder_input_t in = {
+        .softap_active = provision_is_active(),
+        .failsafe_active = failsafe_is_active(&s_failsafe),
+        .provision_boot_run_no_mqtt = s_provision_boot_run_no_mqtt,
+        .ota_failed = ota_update_failed(),
+        .sta_got_ip = s_wifi_up && s_got_ip,
+        .mqtt_connected = mqtt_ha_connected(),
+        .mqtt_session_ready = s_mqtt_session_ready,
+        .ot_healthy = ot_poll_boiler_link_healthy(),
+    };
+    status_led_ladder_result_t out = status_led_ladder_eval(&in);
+    status_led_set_rgb(out.r, out.g, out.b);
+    status_led_set_pattern(out.pattern);
+}
 
 static void mqtt_session_arm(void)
 {
@@ -147,6 +167,7 @@ static void failsafe_task(void *arg)
             s_mqtt_session_ready = false;
         }
         ota_update_tick(now, s_mqtt_session_ready);
+        status_led_bind_tick();
         was_active = active;
         vTaskDelay(pdMS_TO_TICKS(200));
     }
@@ -187,11 +208,13 @@ static void state_publish_task(void *arg)
 
 static void ota_confirm_tick_task(void *arg)
 {
-    /* SoftAP / no-MQTT path: still honour pending-verify confirm timeout → rollback. */
+    /* SoftAP / no-MQTT path: still honour pending-verify confirm timeout → rollback.
+     * Also drive status LED bind (failsafe_task is not created on SoftAP early return). */
     (void)arg;
     while (1) {
         uint32_t now = xTaskGetTickCount() * portTICK_PERIOD_MS;
         ota_update_tick(now, false);
+        status_led_bind_tick();
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
@@ -225,6 +248,7 @@ void app_main(void)
         ESP_LOGW(TAG, "no credentials — SoftAP provisioning");
         ESP_ERROR_CHECK(provision_softap_start(s_cfg.device_id));
         xTaskCreate(ota_confirm_tick_task, "ota_tick", 3072, NULL, 3, NULL);
+        status_led_bind_tick();
         return;
     }
 
@@ -248,6 +272,7 @@ void app_main(void)
     provision_boot_action_t boot =
         provision_boot_action(true, true, s_cfg.mqtt_tls, ca_pem_ok);
     if (boot == PROVISION_BOOT_RUN_NO_MQTT) {
+        s_provision_boot_run_no_mqtt = true;
         /* SoftAP only via GPIO9 long-press once credentials exist (contract). */
         ESP_LOGE(TAG,
                  "MQTT TLS enabled but CA PEM missing — MQTT disabled; "
@@ -272,6 +297,7 @@ void app_main(void)
     mqtt_commands_init(s_cfg.device_id, &s_catalog, s_cfg.ch_min_c, s_cfg.ch_max_c);
     /* Wait briefly for MQTT; discovery/subscribe run after link-up debounce (T051/T053) */
     for (int i = 0; i < 50 && !mqtt_ha_connected(); i++) {
+        status_led_bind_tick();
         vTaskDelay(pdMS_TO_TICKS(100));
     }
     if (mqtt_ha_connected() && !s_mqtt_session_armed) {
@@ -281,6 +307,7 @@ void app_main(void)
     for (int i = 0; i < 15; i++) {
         uint32_t now = xTaskGetTickCount() * portTICK_PERIOD_MS;
         mqtt_session_tick(now);
+        status_led_bind_tick();
         if (s_mqtt_session_ready) {
             break;
         }
@@ -291,6 +318,7 @@ void app_main(void)
         ESP_LOGI(TAG, "free heap after OT+MQTT: %u bytes (budget >= 65536)", (unsigned)free_heap);
     }
 
+    status_led_bind_tick();
     xTaskCreate(failsafe_task, "failsafe", 3072, NULL, 4, NULL);
     xTaskCreate(state_publish_task, "ot_state", 3072, NULL, 3, NULL);
     ESP_LOGI(TAG, "operational");

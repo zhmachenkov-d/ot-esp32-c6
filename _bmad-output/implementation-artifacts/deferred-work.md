@@ -24,3 +24,7 @@
 - source_spec: `_bmad-output/specs/spec-status-led-colors/stories/1-ws2812-bring-up-on-io8.md`
   summary: Document ESP32-C6 GPIO8 bootstrap/strapping constraint for status LED pin
   evidence: onboard WS2812 uses a bootstrap pin; future early-init or pin changes need that recorded
+- source_spec: `_bmad-output/specs/spec-status-led-colors/stories/3-live-status-led-bind-in-firmware.md`
+  summary: Fail-safe ota_update_cancel may leave OTA s_failed true so LED stays critical red after fail-safe clears
+  evidence: Blind-hunter — cancel aborts in-flight OTA into fail path; SPEC binds live s_failed as-is; OTA clear policy out of LED story scope
+

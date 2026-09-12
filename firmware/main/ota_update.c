@@ -842,6 +842,11 @@ bool ota_update_in_progress(void)
     return s_in_progress;
 }
 
+bool ota_update_failed(void)
+{
+    return s_failed;
+}
+
 void ota_update_cancel(void)
 {
     s_cancel = true;
