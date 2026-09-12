@@ -125,8 +125,18 @@ static esp_err_t wifi_sta_start(void)
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wcfg));
     ESP_ERROR_CHECK(esp_wifi_start());
-    EventBits_t bits = xEventGroupWaitBits(s_wifi_events, WIFI_OK_BIT, false, true, pdMS_TO_TICKS(30000));
-    return (bits & WIFI_OK_BIT) ? ESP_OK : ESP_ERR_TIMEOUT;
+    /* Poll so status LED bind can show orange→yellow during join (not one 30 s WaitBits). */
+    const TickType_t deadline = xTaskGetTickCount() + pdMS_TO_TICKS(30000);
+    while (xTaskGetTickCount() < deadline) {
+        EventBits_t bits =
+            xEventGroupWaitBits(s_wifi_events, WIFI_OK_BIT, false, true, pdMS_TO_TICKS(100));
+        status_led_bind_tick();
+        if (bits & WIFI_OK_BIT) {
+            return ESP_OK;
+        }
+    }
+    status_led_bind_tick();
+    return ESP_ERR_TIMEOUT;
 }
 
 static void failsafe_task(void *arg)
@@ -254,6 +264,7 @@ void app_main(void)
 
     ota_update_set_softap_active(false);
 
+    status_led_bind_tick();
     if (wifi_sta_start() != ESP_OK) {
         ESP_LOGW(TAG, "STA join failed — staying up for retry/button");
     }
@@ -285,6 +296,7 @@ void app_main(void)
         ESP_ERROR_CHECK(mqtt_ha_start());
     }
 
+    status_led_bind_tick();
     /* Catalog: load cache then discover/validate */
     if (ot_catalog_load_nvs(&s_catalog) != ESP_OK) {
         ESP_LOGI(TAG, "catalog discovery (cold)");
@@ -293,6 +305,7 @@ void app_main(void)
         ESP_LOGI(TAG, "catalog loaded; re-validate");
         ot_catalog_discover(&s_catalog);
     }
+    status_led_bind_tick();
 
     mqtt_commands_init(s_cfg.device_id, &s_catalog, s_cfg.ch_min_c, s_cfg.ch_max_c);
     /* Wait briefly for MQTT; discovery/subscribe run after link-up debounce (T051/T053) */
