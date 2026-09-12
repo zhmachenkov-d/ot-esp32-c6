@@ -9,24 +9,24 @@ OpenTherm Wi‑Fi MQTT gateway (OTC6) for the WeAct ESP32-C6 Mini. ESP-IDF ≥5.
 
 - Only long-lived branch is `main` (always releasable). Short-lived `feature/*`, `fix/*`, `chore/*`, `hotfix/*` from `main`; update them with `git rebase`, never `git merge` from `main`.
 - Merge to `main` only via PR: squash-and-merge; the squash commit must be Conventional Commits (`type(scope): description`). Prefer 1 approval (2 if the PR touches bootloader/NVS/OTA paths). Tech Lead merges.
-- Release intent on `main`: SemVer from Conventional Commits, tag `vX.Y.Z`, GitHub Release with OTA `manifest.json` + firmware `.bin` (see `firmware/README.md`). Do not invent release branches.
+- Release intent on `main`: SemVer from Conventional Commits, tag `vX.Y.Z`; GitHub Actions builds and publishes OTA `manifest.json` + `otc6_gateway.bin` on that tag (see `firmware/README.md`). Do not invent release branches.
 - Never hardcode secrets (tokens, passwords, keys) in source; use GitHub Secrets, local `.env` (untracked), or device NVS filled by SoftAP commissioning.
 - Architectural changes: add an ADR under `docs/adr/` before implementing.
 
 ## Where things are
 
 - Firmware app and config: `firmware/` (`main/`, `partitions.csv`, `sdkconfig.defaults`); flash helper `firmware/flash.sh`
-- Host unit tests: `firmware/tests/host/` (`./run.sh`); HIL checklists: `firmware/tests/hil/`
+- Host unit tests: `firmware/tests/host/` (`./run.sh`); also CI on every PR/push to `main` (not a tag-release gate); HIL checklists: `firmware/tests/hil/`
 - Domain knowledge (OKF): `knowledge/`; immutable raw sources: `wiki/raw/` — maintain with `okf` (`tools/okf/`)
 - ADRs: `docs/adr/`
 
 ## Running and verifying
 
-- Tooling: ESP-IDF ≥5.4 (lockfile uses 5.4.4), target `esp32c6`; Python ≥3.11 for `okf`.
+- Tooling: ESP-IDF ≥5.4 (local lockfile may pin e.g. 5.4.4); CI and `.devcontainer` track floating `espressif/idf:release-v5.4` — drift is accepted. Target `esp32c6`; Python ≥3.11 for `okf`.
 - Build/flash from `firmware/`: `idf.py set-target esp32c6 && idf.py build`, then `idf.py -p /dev/ttyACM0 flash monitor` or `./firmware/flash.sh` (`PORT=…` if needed). First dual-OTA image after a partition-table change must be USB-flashed once.
 - Host tests: `cd firmware/tests/host && ./run.sh` (needs `IDF_PATH`).
 - Knowledge: `okf index|validate|lint|search knowledge/` — not bare `pytest` for that tree.
-- App SemVer is `APP_FW_VERSION` in `firmware/main/app_config.h`, not a root `VERSION` file.
+- App SemVer is `APP_FW_VERSION` in `firmware/main/app_config.h` (local stub; release CI injects the tag version), not a root `VERSION` file.
 
 ## Conventions that differ from defaults
 

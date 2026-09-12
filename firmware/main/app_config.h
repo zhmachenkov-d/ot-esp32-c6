@@ -7,7 +7,10 @@
 
 #include <stdint.h>
 
+/* Local/dev stub; release CI injects -DAPP_FW_VERSION=\"X.Y.Z\" from the tag. */
+#ifndef APP_FW_VERSION
 #define APP_FW_VERSION              "0.2.2"
+#endif
 
 /* OTA — GitHub Releases manifest (public HTTPS CA; not MQTT broker CA) */
 #define OTA_FIRMWARE_ID             "otc6_gateway"

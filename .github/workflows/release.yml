@@ -1,0 +1,137 @@
+# Tag-push release: build esp32c6 firmware, draft→upload assets→publish.
+# Host tests are intentionally NOT a needs: gate on this workflow.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: espressif/idf:release-v5.4
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate tag shape and main ancestry
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          bash .github/scripts/check-release-tag.sh \
+            --tag "${GITHUB_REF_NAME}" \
+            --sha "${GITHUB_SHA}" \
+            --main-ref origin/main \
+            --github-output
+
+      - name: Build firmware (version inject + size gate)
+        shell: bash
+        run: |
+          set -euo pipefail
+          . /opt/esp/idf/export.sh
+          cd firmware
+          idf.py set-target esp32c6
+          idf.py -DAPP_FW_VERSION="${{ steps.meta.outputs.version }}" build
+          test -f "build/otc6_gateway.bin"
+          VERSION="${{ steps.meta.outputs.version }}"
+          if ! grep -aF "$VERSION" "build/otc6_gateway.bin" >/dev/null; then
+            echo "Injected APP_FW_VERSION '$VERSION' not found in otc6_gateway.bin"
+            exit 1
+          fi
+
+      - name: Upload firmware artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: otc6-gateway-bin
+          path: firmware/build/otc6_gateway.bin
+          if-no-files-found: error
+
+  publish:
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download firmware artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: otc6-gateway-bin
+          path: dist
+
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.build.outputs.tag }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            if ! gh release view "$TAG" --json isDraft --jq .isDraft | grep -qx true; then
+              echo "Release $TAG already exists and is not a draft; refusing to overwrite"
+              exit 1
+            fi
+            echo "Reusing existing draft release $TAG"
+          else
+            gh release create "$TAG" \
+              --draft \
+              --title "$TAG" \
+              --notes "Automated OTC6 firmware release ${VERSION}."
+          fi
+          {
+            echo "### Draft release ready"
+            echo "Tag \`$TAG\` is a **draft** until assets upload and publish succeed."
+            echo "If this job fails after this step: leave the draft; re-run the workflow (it reuses the draft)."
+            echo "Do not delete the draft unless you intend to abandon the release."
+          } >>"$GITHUB_STEP_SUMMARY"
+
+      - name: Generate manifest and upload assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.build.outputs.tag }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          set -euo pipefail
+          bash .github/scripts/generate-ota-manifest.sh --self-test
+          bash .github/scripts/generate-ota-manifest.sh \
+            dist/otc6_gateway.bin \
+            "${VERSION}" \
+            "${{ github.repository }}" \
+            "${TAG}" \
+            manifest.json
+          gh release upload "$TAG" \
+            --clobber \
+            dist/otc6_gateway.bin#otc6_gateway.bin \
+            manifest.json#manifest.json
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          set -euo pipefail
+          gh release edit "$TAG" --draft=false
+
+      - name: Draft recovery hint on failure
+        if: failure()
+        env:
+          TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          {
+            echo "### Release job failed"
+            echo "If a **draft** GitHub Release for \`${TAG:-the tag}\` exists, leave it in place and re-run this workflow."
+            echo "The publish job reuses drafts and uploads with \`--clobber\`. Do not delete the draft unless abandoning the release."
+            echo "Drafts are not \`/latest\` — devices will not OTA from an unpublished draft."
+          } >>"$GITHUB_STEP_SUMMARY"
