@@ -29,6 +29,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # IDF container runs as a different uid than the checkout action.
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git fetch --no-tags origin main
           bash .github/scripts/check-release-tag.sh \
             --tag "${GITHUB_REF_NAME}" \
