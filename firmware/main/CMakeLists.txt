@@ -13,6 +13,7 @@ idf_component_register(
         "provision_validate.c"
         "ota_update.c"
         "status_led.c"
+        "status_led_ladder.c"
     INCLUDE_DIRS "."
     REQUIRES
         nvs_flash

@@ -74,6 +74,14 @@ add_executable(test_status_led
 target_link_libraries(test_status_led unity m)
 add_test(NAME test_status_led COMMAND test_status_led)
 
+# Pure ladder evaluator only (no ESP stubs / status_led.c).
+add_executable(test_status_led_ladder
+  test_status_led_ladder.c
+  ${MAIN_DIR}/status_led_ladder.c
+)
+target_link_libraries(test_status_led_ladder unity m)
+add_test(NAME test_status_led_ladder COMMAND test_status_led_ladder)
+
 # Links real ot_poll.c (bus mutex) with host FreeRTOS/OpenTherm stubs — not the poll stub.
 add_executable(test_ot_poll_bus_lock
   test_ot_poll_bus_lock.c
