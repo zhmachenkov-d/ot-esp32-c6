@@ -30,3 +30,8 @@ idf_component_register(
         esp_https_ota
         esp_http_client
 )
+
+# Optional CI inject: idf.py -DAPP_FW_VERSION=X.Y.Z build (tag without leading v).
+if(DEFINED APP_FW_VERSION AND NOT "${APP_FW_VERSION}" STREQUAL "")
+    target_compile_definitions(${COMPONENT_LIB} PRIVATE "APP_FW_VERSION=\"${APP_FW_VERSION}\"")
+endif()
