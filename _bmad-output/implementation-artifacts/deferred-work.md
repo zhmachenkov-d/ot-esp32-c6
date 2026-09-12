@@ -12,3 +12,6 @@
 - source_spec: /workspaces/ot-esp32-c6/_bmad-output/implementation-artifacts/spec-firmware-ota-release-ci.md
   summary: Document/enforce that next Release tag must be newer than devices flashing the local APP_FW_VERSION stub
   evidence: Blind-hunter — tagging ≤ stub yields a Release devices may not treat as an update; forge already named local stub mismatch crack
+- source_spec: /workspaces/ot-esp32-c6/_bmad-output/implementation-artifacts/spec-firmware-ota-release-ci.md
+  summary: Ancestry/tag-gate PR harness reclaimed via check-release-tag.sh --self-test (party 2B)
+  evidence: Extracted tag shape + merge-base ancestry; host-tests runs self-test; release.yml calls script

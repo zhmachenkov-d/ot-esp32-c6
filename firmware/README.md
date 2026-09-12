@@ -62,6 +62,8 @@ Each Release that should be offered OTA must include:
 
 **Automated release CI:** push a strict SemVer tag `vMAJOR.MINOR.PATCH` whose commit is reachable from `origin/main`. Workflow **Release** (`.github/workflows/release.yml`) builds with ESP-IDF image `espressif/idf:release-v5.4`, injects `APP_FW_VERSION` from the tag (without the leading `v`), runs the CMake OTA size gate, then **draft → upload** `otc6_gateway.bin` + generated `manifest.json` **→ publish**. Do not hand-edit Release JSON for normal releases.
 
+**If the Release workflow fails mid-flight:** a **draft** GitHub Release for that tag may already exist. Leave it; re-run the failed workflow (it reuses the draft and re-uploads assets with `--clobber`). Do not delete the draft unless you are abandoning the release. Drafts are not `/latest` — devices will not OTA from an unpublished draft. Job summaries on Actions also carry this recovery hint.
+
 Local/dev `APP_FW_VERSION` in `main/app_config.h` is a **stub** for untagged builds; it may not match any published Release. Tag-push release is **not** quality-gated by host tests (host tests run on `main` only). After a local `idf.py -DAPP_FW_VERSION=… build`, clear the CMake cache (or rebuild without that `-D`) before expecting the stub again — the inject is cached.
 
 **IDF train:** CI and `.devcontainer` track floating `espressif/idf:release-v5.4`. A local `dependencies.lock` pin (e.g. 5.4.4) may differ — that drift is accepted.

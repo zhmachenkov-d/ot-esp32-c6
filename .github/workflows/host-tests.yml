@@ -23,6 +23,10 @@ jobs:
         shell: bash
         run: bash .github/scripts/generate-ota-manifest.sh --self-test
 
+      - name: Release tag gate self-test
+        shell: bash
+        run: bash .github/scripts/check-release-tag.sh --self-test
+
       - name: Run host unit tests
         shell: bash
         run: |
