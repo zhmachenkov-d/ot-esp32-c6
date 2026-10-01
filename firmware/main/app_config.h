@@ -30,7 +30,9 @@
 #define APP_SOFTAP_BUTTON_GPIO      9
 #define APP_SOFTAP_LONG_PRESS_MS    5000
 
-/* WeAct Mini onboard WS2812 status LED */
+/* WeAct Mini onboard WS2812 status LED.
+ * GPIO8 is an ESP32-C6 strapping pin (boot mode with GPIO9; also ROM UART print).
+ * Early drive or pin remaps must respect that. */
 #define APP_STATUS_LED_GPIO         8
 
 /* SoftAP / CH setpoint fallback seeds (°C) */
