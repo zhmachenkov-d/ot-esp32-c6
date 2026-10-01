@@ -613,14 +613,26 @@ static void schedule_manifest_poll(uint32_t now_ms)
     }
 }
 
-static bool verify_partition_sha256(const esp_partition_t *part, size_t img_len, const char *expect_hex)
+/* Returns true on digest match. On cancel, sets *cancelled and returns false. */
+static bool verify_partition_sha256(const esp_partition_t *part, size_t img_len, const char *expect_hex,
+                                    bool *cancelled)
 {
+    if (cancelled) {
+        *cancelled = false;
+    }
     mbedtls_sha256_context ctx;
     mbedtls_sha256_init(&ctx);
     mbedtls_sha256_starts(&ctx, 0);
     uint8_t chunk[1024];
     size_t off = 0;
     while (off < img_len) {
+        if (s_cancel) {
+            if (cancelled) {
+                *cancelled = true;
+            }
+            mbedtls_sha256_free(&ctx);
+            return false;
+        }
         size_t n = img_len - off;
         if (n > sizeof(chunk)) {
             n = sizeof(chunk);
@@ -645,6 +657,8 @@ static bool verify_partition_sha256(const esp_partition_t *part, size_t img_len,
 static void ota_task(void *arg)
 {
     (void)arg;
+    /* Entry-cause into abort shared tail — not "s_cancel was ever set". */
+    bool cancel_caused_abort = false;
     s_in_progress = true;
     s_failed = false;
     s_has_percentage = true;
@@ -686,9 +700,7 @@ static void ota_task(void *arg)
 
     while (1) {
         if (s_cancel) {
-            esp_https_ota_abort(handle);
-            ESP_LOGW(TAG, "OTA cancelled");
-            goto fail_abort;
+            goto cancel_now;
         }
         err = esp_https_ota_perform(handle);
         if (err != ESP_ERR_HTTPS_OTA_IN_PROGRESS) {
@@ -725,13 +737,26 @@ static void ota_task(void *arg)
         goto fail_abort;
     }
 
+    if (s_cancel) {
+        goto cancel_now;
+    }
+
     int img_len = esp_https_ota_get_image_len_read(handle);
     if (s_cache.has_sha256) {
-        if (img_len <= 0 || !verify_partition_sha256(update_part, (size_t)img_len, s_cache.sha256)) {
+        bool sha_cancelled = false;
+        if (img_len <= 0 ||
+            !verify_partition_sha256(update_part, (size_t)img_len, s_cache.sha256, &sha_cancelled)) {
+            if (sha_cancelled) {
+                goto cancel_now;
+            }
             ESP_LOGE(TAG, "sha256 mismatch");
             esp_https_ota_abort(handle);
             goto fail_abort;
         }
+    }
+
+    if (s_cancel) {
+        goto cancel_now;
     }
 
     err = esp_https_ota_finish(handle);
@@ -758,11 +783,17 @@ static void ota_task(void *arg)
     vTaskDelay(pdMS_TO_TICKS(500));
     esp_restart();
 
+cancel_now:
+    esp_https_ota_abort(handle);
+    ESP_LOGW(TAG, "OTA cancelled");
+    cancel_caused_abort = true;
+    goto fail_abort;
+
 fail_abort:
 fail:
     s_in_progress = false;
     s_has_percentage = false;
-    s_failed = true;
+    s_failed = ota_failed_after_download_abort(s_failed, cancel_caused_abort);
     ota_update_publish_state();
     s_ota_task = NULL;
     vTaskDelete(NULL);
