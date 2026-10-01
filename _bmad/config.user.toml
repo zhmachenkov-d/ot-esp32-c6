@@ -11,7 +11,7 @@
 
 [core]
 user_name = "Unknown"
-communication_language = "English"
+communication_language = "Russian"
 
 [modules.bmm]
 user_skill_level = "intermediate"
