@@ -26,7 +26,9 @@
 #define APP_OT_GPIO_IN              2
 #define APP_OT_GPIO_OUT             3
 
-/* SoftAP re-provision button (WeAct SW2) */
+/* SoftAP re-provision button (WeAct SW2).
+ * GPIO9 is an ESP32-C6 strapping pin (boot mode with GPIO8).
+ * Early drive or boot-time levels must respect that. */
 #define APP_SOFTAP_BUTTON_GPIO      9
 #define APP_SOFTAP_LONG_PRESS_MS    5000
 

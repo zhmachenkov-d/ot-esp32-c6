@@ -49,3 +49,6 @@
   summary: SoftAP button GPIO9 (APP_SOFTAP_BUTTON_GPIO) is also an ESP32-C6 strapping pin and remains undocumented at its define / SoftAP docs
   evidence: Blind-hunter — new GPIO8 note mentions boot mode with GPIO9 but does not document GPIO9 remaps; out of SPEC-gpio8-bootstrap-docs LED-only scope
 
+- source_spec: /workspaces/ot-esp32-c6/_bmad-output/implementation-artifacts/spec-docs-tails-agents-gpio9.md
+  summary: AGENTS.md Policy Release parenthetical "(details in firmware/README.md)" sits after the publish clause, so it can read as documenting asset publish rather than tag>stub compare semantics
+  evidence: Blind-hunter — agents following the pointer for comparison rules may miss that the full gate (strip v, stub path, equal/older fail) lives in firmware/README.md; deferred because review patches must not edit AGENTS.md
