@@ -11,6 +11,6 @@ project_knowledge: "{project-root}/docs"
 # Core Configuration Values
 user_name: Unknown
 project_name: ot-esp32-c6
-communication_language: English
+communication_language: Russian
 document_output_language: English
 output_folder: _bmad-output
