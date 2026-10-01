@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Forge Report — deferred-one-slice</title>
+<style>
+  :root {
+    --ink: #1a1510;
+    --parchment: #f3e6d0;
+    --edge: #c4a574;
+    --seal: #2d5a27;
+    --seal-rim: #1a3a18;
+    --ok: #2d5a27;
+    --muted: #5c4a3a;
+    --kill: #7a2e2e;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    background:
+      radial-gradient(ellipse at 20% 0%, #fff8ec 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 100%, #e8d4b8 0%, transparent 45%),
+      var(--parchment);
+    color: var(--ink);
+    padding: 2.5rem 1.25rem 3rem;
+  }
+  .sheet {
+    max-width: 42rem;
+    margin: 0 auto;
+    border: 2px solid var(--edge);
+    padding: 2rem 2rem 2.5rem;
+    background: rgba(255, 250, 240, 0.85);
+    box-shadow: 0 8px 28px rgba(60, 40, 20, 0.12);
+  }
+  h1 { font-size: 1.55rem; letter-spacing: 0.02em; margin: 0 0 0.35rem; }
+  .meta { color: var(--muted); font-size: 0.95rem; margin-bottom: 1.5rem; }
+  h2 {
+    font-size: 1.05rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--edge);
+    padding-bottom: 0.3rem;
+    margin: 1.6rem 0 0.7rem;
+  }
+  ul { margin: 0.4rem 0 0; padding-left: 1.2rem; }
+  li { margin: 0.35rem 0; line-height: 1.45; }
+  .personas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.85rem;
+    margin-top: 0.5rem;
+  }
+  .persona {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.92rem;
+    background: rgba(196, 165, 116, 0.18);
+    padding: 0.25rem 0.55rem;
+    border-radius: 2px;
+  }
+  .seal-wrap { display: flex; justify-content: center; margin: 2rem 0 0.5rem; }
+  .seal-label {
+    text-align: center;
+    font-weight: bold;
+    letter-spacing: 0.2em;
+    color: var(--ok);
+    font-size: 0.85rem;
+    margin-bottom: 0.25rem;
+  }
+  .outcome {
+    text-align: center;
+    font-size: 1.1rem;
+    color: var(--ok);
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+  }
+</style>
+</head>
+<body>
+  <div class="sheet">
+    <h1>Forge Report — deferred-one-slice</h1>
+    <p class="meta">ot-esp32-c6 · 2026-10-01 · цель: проверить «deferred = один срез»</p>
+
+    <div class="seal-wrap">
+      <svg width="140" height="140" viewBox="0 0 140 140" aria-label="HARDENED seal">
+        <circle cx="70" cy="70" r="62" fill="var(--seal)" stroke="var(--seal-rim)" stroke-width="6"/>
+        <circle cx="70" cy="70" r="48" fill="none" stroke="#e8d4b8" stroke-width="2" stroke-dasharray="4 3"/>
+        <text x="70" y="66" text-anchor="middle" fill="#f3e6d0" font-family="Georgia, serif" font-size="14" font-weight="bold" letter-spacing="2">HARDENED</text>
+        <text x="70" y="86" text-anchor="middle" fill="#c4a574" font-family="Georgia, serif" font-size="9" letter-spacing="1">TRIAGE</text>
+      </svg>
+    </div>
+    <p class="seal-label">HARDENED</p>
+    <p class="outcome">Идея «один срез» убита; triage + три отдельных keep</p>
+
+    <h2>Исход</h2>
+    <ul>
+      <li>Центральный тезис не выдержал: пять открытых пунктов — не одна shippable единица.</li>
+      <li>Режим C: kill / keep / later по пунктам, не один PR «deferred cleanup».</li>
+    </ul>
+
+    <h2>Locked</h2>
+    <ul>
+      <li>Три keep = три среза. Порядок: OTA cancel ≠ failed → tag &gt; stub gate → GPIO8 docs.</li>
+      <li>Cancel ≠ failed: cancel/fail_abort-from-cancel не ставит <code>s_failed</code>; реальные OTA errors — ставят.</li>
+      <li>Release CI отклоняет tag, чей SemVer не строго новее stub в <code>app_config.h</code>.</li>
+      <li>GPIO8 strapping — короткий docs note, отдельный chore.</li>
+    </ul>
+
+    <h2>Rejected / killed</h2>
+    <ul>
+      <li>Один срез / один chore-PR на весь deferred.</li>
+      <li>Formal exclusive predicates в <code>bring-up-ladder.md</code> (контракт = C + тесты).</li>
+      <li>Автопроверка SoftAP / <code>status_led_init</code> placement.</li>
+      <li>Clear-on-failsafe-exit и LED-исключение для <code>s_failed</code>.</li>
+    </ul>
+
+    <h2>Surviving cracks</h2>
+    <ul>
+      <li>Stub bump после релиза вручную; gate не обеспечивает hygiene stub.</li>
+    </ul>
+
+    <h2>Personas</h2>
+    <div class="personas">
+      <span class="persona">💻 Amelia — Senior Software Engineer</span>
+      <span class="persona">📋 John — Product Manager</span>
+      <span class="persona">🏗️ Winston — System Architect</span>
+      <span class="persona">📏 Level — Claim Checker</span>
+      <span class="persona">🎯 Yui — The Craftsman</span>
+      <span class="persona">🚢 Dana — The Pragmatist</span>
+      <span class="persona">🌶️ Boundary — Edge-Case Hunter</span>
+      <span class="persona">🪵 Splinter — Consensus Challenger</span>
+      <span class="persona">🛑 Killjoy — Loop Stopper</span>
+      <span class="persona">😤 Grumbal — The Adversary</span>
+      <span class="persona">Tess — Release ops (generated)</span>
+    </div>
+  </div>
+</body>
+</html>

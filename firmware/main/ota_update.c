@@ -235,6 +235,14 @@ bool ota_size_fits_slot(bool has_size, int64_t size, size_t slot_bytes)
     return (uint64_t)size <= (uint64_t)slot_bytes;
 }
 
+bool ota_failed_after_download_abort(bool prior_failed, bool cancel_caused_abort)
+{
+    if (cancel_caused_abort) {
+        return prior_failed;
+    }
+    return true;
+}
+
 int ota_json_escape(char *dst, size_t cap, const char *src)
 {
     if (!dst || !src || cap == 0) {

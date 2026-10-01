@@ -196,6 +196,18 @@ void test_install_topic(void)
     TEST_ASSERT_FALSE(ota_update_is_install_topic("otc6/aabbccddeeff/ot/1/set", "aabbccddeeff"));
 }
 
+void test_failed_after_download_abort(void)
+{
+    /* Cancel, clean prior → not failed */
+    TEST_ASSERT_FALSE(ota_failed_after_download_abort(false, true));
+    /* Cancel, sticky prior → stays failed */
+    TEST_ASSERT_TRUE(ota_failed_after_download_abort(true, true));
+    /* Real error, clean prior → failed */
+    TEST_ASSERT_TRUE(ota_failed_after_download_abort(false, false));
+    /* Real error, sticky prior → stays failed */
+    TEST_ASSERT_TRUE(ota_failed_after_download_abort(true, false));
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -212,5 +224,6 @@ int main(void)
     RUN_TEST(test_json_escape_quotes);
     RUN_TEST(test_size_fits_slot);
     RUN_TEST(test_install_topic);
+    RUN_TEST(test_failed_after_download_abort);
     return UNITY_END();
 }

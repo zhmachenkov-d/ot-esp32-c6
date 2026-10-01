@@ -24,6 +24,9 @@ CMakeUserPresets.json
 !.env.example
 .certs/
 
+# Personal BMAD / skill overrides (installer-managed; not shared)
+*.user.toml
+
 # Scratch dump from `specify extension` catalog listing
 extensions.txt
 __pycache__/

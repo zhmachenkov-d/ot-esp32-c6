@@ -1,0 +1,17 @@
+- id: "1"
+  title: Host-testable OTA abort failed policy
+  description: >-
+    Pure helper ota_failed_after_download_abort(prior_failed, cancel_caused_abort)
+    with Unity coverage for cancel keeping prior, error → true, and sticky prior-failed
+    (CAP-1 policy; SPEC pure-helper constraint). No HTTPS OTA task or device wiring.
+  spec_checkpoint: true
+  done_checkpoint: true
+- id: "2"
+  title: Wire download-task abort to cancel≠failed
+  description: >-
+    Download-task fail_abort classifies entry-cause (cancel vs begin/perform/
+    incomplete/sha256/finish error), feeds two bools into the helper, and assigns
+    s_failed so ota_update_failed() and MQTT update-state match CAP-1. No LED,
+    fail-safe, or install-reject changes.
+  spec_checkpoint: true
+  done_checkpoint: true
