@@ -24,7 +24,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Validate tag shape and main ancestry
+      - name: Validate tag shape, stub-newer, and main ancestry
         id: meta
         shell: bash
         run: |
