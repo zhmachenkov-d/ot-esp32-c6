@@ -42,4 +42,7 @@
 - source_spec: `_bmad-output/specs/spec-ota-cancel-neq-failed/stories/2-wire-download-task-abort-to-cancel-neq-failed.md`
   summary: HIL OTA cancel≠failed checklist case — resolved (v10_ota.md case 7)
   evidence: Walkthrough follow-up patch on fix/ota-cancel-neq-failed-wire
+- source_spec: /workspaces/ot-esp32-c6/_bmad-output/implementation-artifacts/spec-release-tag-gt-stub.md
+  summary: AGENTS.md still omits Release tag must be strictly greater than APP_FW_VERSION stub
+  evidence: Blind-hunter — firmware/README.md documents the gate; agent-facing AGENTS.md release guidance does not
 
