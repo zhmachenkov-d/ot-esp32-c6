@@ -645,6 +645,8 @@ static bool verify_partition_sha256(const esp_partition_t *part, size_t img_len,
 static void ota_task(void *arg)
 {
     (void)arg;
+    /* Entry-cause into abort shared tail — not "s_cancel was ever set". */
+    bool cancel_caused_abort = false;
     s_in_progress = true;
     s_failed = false;
     s_has_percentage = true;
@@ -688,6 +690,7 @@ static void ota_task(void *arg)
         if (s_cancel) {
             esp_https_ota_abort(handle);
             ESP_LOGW(TAG, "OTA cancelled");
+            cancel_caused_abort = true;
             goto fail_abort;
         }
         err = esp_https_ota_perform(handle);
@@ -762,7 +765,7 @@ fail_abort:
 fail:
     s_in_progress = false;
     s_has_percentage = false;
-    s_failed = true;
+    s_failed = ota_failed_after_download_abort(s_failed, cancel_caused_abort);
     ota_update_publish_state();
     s_ota_task = NULL;
     vTaskDelete(NULL);
