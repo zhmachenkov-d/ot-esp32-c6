@@ -37,9 +37,9 @@
   summary: Fail-safe ota_update_cancel may leave OTA s_failed true so LED stays critical red after fail-safe clears — superseded by spec-ota-cancel-neq-failed
   evidence: Blind-hunter — cancel aborts in-flight OTA into fail path; LED SPEC binds live s_failed as-is; clear policy moved to OTA abort-path SPEC
 - source_spec: `_bmad-output/specs/spec-ota-cancel-neq-failed/stories/2-wire-download-task-abort-to-cancel-neq-failed.md`
-  summary: OTA cancel is only sampled in the esp_https_ota_perform loop — cancel during sha256 verify or finish does not set cancel_caused_abort
-  evidence: Pre-existing poll window; story 2 wiring did not expand cancel sampling; out of CAP-1 download-abort entry-cause scope as implemented
+  summary: OTA cancel sampling during sha256 verify / before finish — resolved (cancel_now + mid-sha256 poll)
+  evidence: Walkthrough follow-up patch on fix/ota-cancel-neq-failed-wire
 - source_spec: `_bmad-output/specs/spec-ota-cancel-neq-failed/stories/2-wire-download-task-abort-to-cancel-neq-failed.md`
-  summary: HIL OTA checklist lacks fail-safe cancel≠failed / LED+MQTT assertion for SPEC success signal
-  evidence: firmware/tests/hil/v10_ota.md has no cancel-driven abort case; SPEC success is on-device
+  summary: HIL OTA cancel≠failed checklist case — resolved (v10_ota.md case 7)
+  evidence: Walkthrough follow-up patch on fix/ota-cancel-neq-failed-wire
 
