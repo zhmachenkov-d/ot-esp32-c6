@@ -26,6 +26,7 @@ CMakeUserPresets.json
 
 # Personal BMAD / skill overrides (installer-managed; not shared)
 *.user.toml
+_bmad/**/config.user.yaml
 
 # Scratch dump from `specify extension` catalog listing
 extensions.txt
