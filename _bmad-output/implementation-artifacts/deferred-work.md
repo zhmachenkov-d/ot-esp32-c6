@@ -45,4 +45,7 @@
 - source_spec: /workspaces/ot-esp32-c6/_bmad-output/implementation-artifacts/spec-release-tag-gt-stub.md
   summary: AGENTS.md still omits Release tag must be strictly greater than APP_FW_VERSION stub
   evidence: Blind-hunter — firmware/README.md documents the gate; agent-facing AGENTS.md release guidance does not
+- source_spec: /workspaces/ot-esp32-c6/_bmad-output/implementation-artifacts/spec-gpio8-bootstrap-docs.md
+  summary: SoftAP button GPIO9 (APP_SOFTAP_BUTTON_GPIO) is also an ESP32-C6 strapping pin and remains undocumented at its define / SoftAP docs
+  evidence: Blind-hunter — new GPIO8 note mentions boot mode with GPIO9 but does not document GPIO9 remaps; out of SPEC-gpio8-bootstrap-docs LED-only scope
 

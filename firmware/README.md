@@ -37,6 +37,10 @@ If it does not, open **http://192.168.4.1/** in the phone/laptop browser while c
 
 Long-press GPIO9 ≥5 s clears Wi‑Fi/MQTT credentials and re-enters SoftAP mode (SoftAP PSK is retained for label/QR).
 
+## Status LED
+
+Onboard WS2812 on GPIO8 (`APP_STATUS_LED_GPIO` in `main/app_config.h`). GPIO8 is an ESP32-C6 strapping pin (boot mode with GPIO9; also ROM UART print) — early drive or pin remaps must respect that.
+
 ## OTA firmware updates
 
 Dual-slot OTA (`ota_0` / `ota_1`, ~1.91 MiB each on 4 MiB flash after 64 KiB app alignment) with bootloader rollback. The device polls a GitHub Releases `manifest.json`, exposes a Home Assistant MQTT Discovery **update** entity, and downloads the cached HTTPS asset URL using the **public CA bundle** (not the MQTT broker CA in NVS).
