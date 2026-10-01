@@ -91,6 +91,14 @@ bool ota_confirm_timeout_elapsed(bool pending_verify, uint32_t now_ms, uint32_t 
  */
 bool ota_size_fits_slot(bool has_size, int64_t size, size_t slot_bytes);
 
+/**
+ * Download-task abort → failed-flag policy (CAP-1).
+ * cancel_caused_abort is entry-cause into the abort path (this abort was
+ * cancel-driven), not “cancel was ever set earlier in the session.” Cancel keeps prior_failed;
+ * real error → true.
+ */
+bool ota_failed_after_download_abort(bool prior_failed, bool cancel_caused_abort);
+
 /** Build HA update state JSON. Returns bytes written or -1. */
 int ota_build_state_json(char *buf, size_t cap, const ota_progress_state_t *st);
 
