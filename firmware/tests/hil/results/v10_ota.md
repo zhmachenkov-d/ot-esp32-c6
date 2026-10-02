@@ -1,8 +1,8 @@
 # V10 OTA — HIL results
 
-Date: 2026-09-04 (cases 1–2); 2026-09-05 (cases 3–6); case 7 pending  
+Date: 2026-09-04 (cases 1–2); 2026-09-05 (cases 3–6); 2026-10-02 (case 7)  
 Baseline on device: **0.2.0** (USB flash; includes GitHub redirect fix)  
-Release under test: [v0.2.2](https://github.com/zhmachenkov-d/ot-esp32-c6/releases/tag/v0.2.2) (cases 1–2); [v0.2.3](https://github.com/zhmachenkov-d/ot-esp32-c6/releases/tag/v0.2.3) (cases 3–6)  
+Release under test: [v0.2.2](https://github.com/zhmachenkov-d/ot-esp32-c6/releases/tag/v0.2.2) (cases 1–2); [v0.2.3](https://github.com/zhmachenkov-d/ot-esp32-c6/releases/tag/v0.2.3) (cases 3–6); case 7 against latest [v0.3.0](https://github.com/zhmachenkov-d/ot-esp32-c6/releases/tag/v0.3.0) from USB-flashed `main` (`0.2.2` stub + PR #22 cancel≠failed, app `v0.3.0-17-gc1a2a97`)  
 Manifest: `https://github.com/zhmachenkov-d/ot-esp32-c6/releases/latest/download/manifest.json`
 
 | # | Case | Result | Notes |
@@ -13,7 +13,7 @@ Manifest: `https://github.com/zhmachenkov-d/ot-esp32-c6/releases/latest/download
 | 4 | Confirm timeout (~15 min) → rollback to A | ✗ / retry | OTA to 0.2.3 OK (`ota_0`). NVS erase via esptool reset while pending-verify → bootloader rolled back to **0.2.2** immediately (no `confirm timeout` log). Need retest: keep 0.2.3 running and block MQTT ~15 min (no chip reset). NVS restored. |
 | 5 | SoftAP: Install does not run | ✓ | Erased NVS (HIL stand-in for long-press clear); `wifi=0 mqtt=0`; SoftAP `OTC6-dd40` + portal; no MQTT / no manifest poll. NVS restored afterward. |
 | 6 | Manifest poll shows newer `latest_version` | ✓ | After v0.2.3 Release published; reboot → session ready → `manifest ok version=0.2.3 newer=1` (~3.5 min catalog wait). |
-| 7 | Fail-safe cancel ≠ failed | ☐ | Needs on-device run after `fix/ota-cancel-neq-failed-wire` (PR #22). Checklist: `firmware/tests/hil/v10_ota.md` §7. |
+| 7 | Fail-safe cancel ≠ failed | ✓ | USB `main` w/ cancel≠failed; HA Install toward 0.3.0; drop link during `Writing to <ota_1>`; serial `OTA cancelled` (~11 s after start); no `OTA success`; stayed **0.2.2**. No `Install rejected` / ota `failed` log from that abort. LED after fail-safe clear: operator-confirmed separately if noted. |
 
 ## Preconditions checklist
 
@@ -22,4 +22,4 @@ Manifest: `https://github.com/zhmachenkov-d/ot-esp32-c6/releases/latest/download
 - [x] Device on Wi‑Fi + MQTT (serial: STA `10.0.10.18`, `mqtt_ha: connected`)
 - [x] HA shows **Firmware** update entity; case 1 completed at installed **0.2.2**
 - [x] GitHub Release v0.2.3 with `manifest.json` + `otc6_gateway.bin` (HIL cases 3–6)
-- [ ] On-device baseline with cancel≠failed wiring for case 7 (post-PR #22 firmware)
+- [x] On-device baseline with cancel≠failed wiring for case 7 (USB flash `main` post-PR #22; target Release v0.3.0)

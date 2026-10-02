@@ -40,8 +40,9 @@
   summary: OTA cancel sampling during sha256 verify / before finish — resolved (cancel_now + mid-sha256 poll)
   evidence: Walkthrough follow-up patch on fix/ota-cancel-neq-failed-wire
 - source_spec: `_bmad-output/specs/spec-ota-cancel-neq-failed/stories/2-wire-download-task-abort-to-cancel-neq-failed.md`
-  summary: HIL OTA cancel≠failed checklist case — checklist landed (v10_ota.md case 7); results row pending on-device (☐ in results/v10_ota.md)
-  evidence: Walkthrough follow-up patch on fix/ota-cancel-neq-failed-wire; results table row added docs/hil-ota-results-3-7
+  summary: HIL OTA cancel≠failed checklist case — resolved (v10_ota.md case 7; results ✓ 2026-10-02)
+  evidence: Serial Starting OTA → Writing ota_1 → OTA cancelled; stayed 0.2.2; docs/hil-ota-results-3-7
+
 - source_spec: /workspaces/ot-esp32-c6/_bmad-output/implementation-artifacts/spec-release-tag-gt-stub.md
   summary: AGENTS.md still omits Release tag must be strictly greater than APP_FW_VERSION stub
   evidence: Blind-hunter — firmware/README.md documents the gate; agent-facing AGENTS.md release guidance does not
