@@ -332,7 +332,9 @@ void app_main(void)
     }
 
     status_led_bind_tick();
-    xTaskCreate(failsafe_task, "failsafe", 3072, NULL, 4, NULL);
+    /* 8192 bytes: mqtt_session_tick rediscovery nests ~2 KiB+ JSON locals + snprintf
+     * here; 3072 overflowed on MQTT reconnect after long fail-safe (Stack protection fault). */
+    xTaskCreate(failsafe_task, "failsafe", 8192, NULL, 4, NULL);
     xTaskCreate(state_publish_task, "ot_state", 3072, NULL, 3, NULL);
     ESP_LOGI(TAG, "operational");
 }

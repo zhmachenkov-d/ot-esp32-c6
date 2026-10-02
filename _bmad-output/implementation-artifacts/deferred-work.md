@@ -53,3 +53,9 @@
 - source_spec: /workspaces/ot-esp32-c6/_bmad-output/implementation-artifacts/spec-docs-tails-agents-gpio9.md
   summary: AGENTS.md Policy Release README pointer mis-aimed at publish — resolved (pointer now reads "tag>stub compare in firmware/README.md", sentence break before publish)
   evidence: Blind-hunter — agents following the pointer for comparison rules may miss that the full gate lives in firmware/README.md; fixed in AGENTS.md Policy Release bullet
+- source_spec: /workspaces/ot-esp32-c6/_bmad-output/implementation-artifacts/spec-failsafe-stack.md
+  summary: On-device HIL retest — long fail-safe then MQTT reconnect must not Stack-protection-fault the failsafe task (and ideally logs confirm timeout if pending-verify)
+  evidence: Blind-hunter — host tests and idf.py build cannot catch the rediscovery stack path; case 4 retry originally panicked here
+- source_spec: /workspaces/ot-esp32-c6/_bmad-output/implementation-artifacts/spec-failsafe-stack.md
+  summary: Optional — raise CONFIG_ESP_MAIN_TASK_STACK_SIZE above 3584; boot mqtt_session_tick discovery still runs on app_main with thin margin
+  evidence: Blind-hunter — peak nested discovery ~3400 bytes fit 3584 in field boots but leave little headroom; not caused by failsafe bump
