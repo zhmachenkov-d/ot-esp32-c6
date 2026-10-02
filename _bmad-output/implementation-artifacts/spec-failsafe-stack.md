@@ -20,10 +20,10 @@ context: []
 
 ## Implementation Notes
 
-- Raised `failsafe` task stack 3072 → 8192 bytes in `firmware/main/main.c` (same ballpark as `ota` 8192 / `ota_poll` 6144). Comment notes nested rediscovery buffers + the reconnect overflow.
-- Left discovery on `failsafe` / `mqtt_session_tick` unchanged (Intent: stack only).
-- Host `./run.sh`: 13/13 pass. `idf.py build` OK (OTA size gate OK).
-- Blind-hunter: clarified comment (~2 KiB+ nested locals, bytes); HIL results citation lives on `docs/hil-ota-case4-retry` (separate commit). Deferred: on-device rediscovery retest; optional main-task stack margin.
+- Raised `failsafe` task stack then, on human patch request: moved HA rediscovery to dedicated `mqtt_sess` (8192) and dropped `mqtt_session_tick` from `failsafe_task`; `failsafe` now 4096 (margin above old 3072 panic floor).
+- `CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192` in `firmware/sdkconfig.defaults` (boot wait no longer runs discovery on main after session task starts early).
+- Host `./run.sh` + `idf.py build` re-verified after patches.
+- Deferred HIL rediscovery retest still applies on-device.
 
 ## Spec Change Log
 

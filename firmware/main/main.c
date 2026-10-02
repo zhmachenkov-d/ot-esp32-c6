@@ -95,6 +95,17 @@ static void mqtt_session_tick(uint32_t now_ms)
     ESP_LOGI(TAG, "MQTT session ready (discovery + subscribe after debounce)");
 }
 
+/* Owns HA rediscovery (~2 KiB+ JSON locals) — never run that on failsafe's stack. */
+static void mqtt_session_task(void *arg)
+{
+    (void)arg;
+    while (1) {
+        uint32_t now = xTaskGetTickCount() * portTICK_PERIOD_MS;
+        mqtt_session_tick(now);
+        vTaskDelay(pdMS_TO_TICKS(200));
+    }
+}
+
 static void wifi_event_handler(void *arg, esp_event_base_t base, int32_t id, void *data)
 {
     (void)arg;
@@ -147,7 +158,6 @@ static void failsafe_task(void *arg)
         bool mqtt_up = mqtt_ha_connected();
         uint32_t now = xTaskGetTickCount() * portTICK_PERIOD_MS;
         failsafe_on_link(&s_failsafe, s_wifi_up && s_got_ip, mqtt_up, now);
-        mqtt_session_tick(now);
         bool active = failsafe_is_active(&s_failsafe);
         if (active && !was_active) {
             /* Option A: present offline when active — hold live NVS last CH (T047) */
@@ -294,6 +304,7 @@ void app_main(void)
                                      ca_pem));
         mqtt_ha_set_connected_callback(on_mqtt_connected, NULL);
         ESP_ERROR_CHECK(mqtt_ha_start());
+        xTaskCreate(mqtt_session_task, "mqtt_sess", 8192, NULL, 4, NULL);
     }
 
     status_led_bind_tick();
@@ -316,10 +327,8 @@ void app_main(void)
     if (mqtt_ha_connected() && !s_mqtt_session_armed) {
         mqtt_session_arm();
     }
-    /* Drain debounce so first subscribe happens before we log heap */
+    /* Drain debounce (mqtt_sess owns rediscovery) so first subscribe before heap log */
     for (int i = 0; i < 15; i++) {
-        uint32_t now = xTaskGetTickCount() * portTICK_PERIOD_MS;
-        mqtt_session_tick(now);
         status_led_bind_tick();
         if (s_mqtt_session_ready) {
             break;
@@ -332,9 +341,8 @@ void app_main(void)
     }
 
     status_led_bind_tick();
-    /* 8192 bytes: mqtt_session_tick rediscovery nests ~2 KiB+ JSON locals + snprintf
-     * here; 3072 overflowed on MQTT reconnect after long fail-safe (Stack protection fault). */
-    xTaskCreate(failsafe_task, "failsafe", 8192, NULL, 4, NULL);
+    /* Rediscovery runs on mqtt_sess (8192); keep margin above old 3072 panic floor. */
+    xTaskCreate(failsafe_task, "failsafe", 4096, NULL, 4, NULL);
     xTaskCreate(state_publish_task, "ot_state", 3072, NULL, 3, NULL);
     ESP_LOGI(TAG, "operational");
 }
