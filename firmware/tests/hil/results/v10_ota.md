@@ -13,7 +13,7 @@ Manifest: `https://github.com/zhmachenkov-d/ot-esp32-c6/releases/latest/download
 | 4 | Confirm timeout (~15 min) → rollback to A | ✗ / retry | OTA to 0.2.3 OK (`ota_0`). NVS erase via esptool reset while pending-verify → bootloader rolled back to **0.2.2** immediately (no `confirm timeout` log). Need retest: keep 0.2.3 running and block MQTT ~15 min (no chip reset). NVS restored. |
 | 5 | SoftAP: Install does not run | ✓ | Erased NVS (HIL stand-in for long-press clear); `wifi=0 mqtt=0`; SoftAP `OTC6-dd40` + portal; no MQTT / no manifest poll. NVS restored afterward. |
 | 6 | Manifest poll shows newer `latest_version` | ✓ | After v0.2.3 Release published; reboot → session ready → `manifest ok version=0.2.3 newer=1` (~3.5 min catalog wait). |
-| 7 | Fail-safe cancel ≠ failed | ✓ | USB `main` w/ cancel≠failed; HA Install toward 0.3.0; drop link during `Writing to <ota_1>`; serial `OTA cancelled` (~11 s after start); no `OTA success`; stayed **0.2.2**. No `Install rejected` / ota `failed` log from that abort. LED after fail-safe clear: operator-confirmed separately if noted. |
+| 7 | Fail-safe cancel ≠ failed | ✓ | USB `main` w/ cancel≠failed; HA Install toward 0.3.0; drop link during `Writing to <ota_1>`; serial `OTA cancelled` (~11 s after start); no `OTA success`; stayed **0.2.2**. No `Install rejected` / ota `failed` log from that abort. After fail-safe clear, status LED left critical red (operator confirm). |
 
 ## Preconditions checklist
 
