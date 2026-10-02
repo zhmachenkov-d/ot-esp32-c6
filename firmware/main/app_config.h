@@ -9,7 +9,7 @@
 
 /* Local/dev stub; release CI injects -DAPP_FW_VERSION=\"X.Y.Z\" from the tag. */
 #ifndef APP_FW_VERSION
-#define APP_FW_VERSION              "0.2.2"
+#define APP_FW_VERSION              "0.4.0"
 #endif
 
 /* OTA — GitHub Releases manifest (public HTTPS CA; not MQTT broker CA) */
