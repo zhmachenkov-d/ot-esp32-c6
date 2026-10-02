@@ -11,7 +11,7 @@
   evidence: Verification-gap review — gates live only inline in release.yml; host-tests cannot catch regression until a real tag push
 - source_spec: `_bmad-output/specs/spec-release-tag-gt-stub/SPEC.md`
   summary: Enforce Release tag SemVer strictly greater than local APP_FW_VERSION stub (check-release-tag.sh / release.yml)
-  evidence: Blind-hunter — tagging ≤ stub yields a Release devices may not treat as an update; forge deferred-one-slice keep/after; stub hygiene after release still manual (surviving crack)
+  evidence: Blind-hunter — tagging ≤ stub yields a Release devices may not treat as an update; forge deferred-one-slice keep/after; stub hygiene after release tracked via post-publish stub-bump PR (chore/ci-stub-bump-pr-after-release)
 - source_spec: /workspaces/ot-esp32-c6/_bmad-output/implementation-artifacts/spec-firmware-ota-release-ci.md
   summary: Document/enforce that next Release tag must be newer than devices flashing the local APP_FW_VERSION stub — superseded by spec-release-tag-gt-stub
   evidence: Blind-hunter — tagging ≤ stub yields a Release devices may not treat as an update; forge already named local stub mismatch crack; tracking moved to SPEC slice 2/3

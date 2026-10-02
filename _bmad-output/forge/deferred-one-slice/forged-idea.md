@@ -13,4 +13,4 @@
 - Автопроверка placement `status_led_init` vs SoftAP return (cost > value).
 
 ## Surviving cracks
-- Stub bump после релиза всё ещё вручную; gate не чинит hygiene stub.
+- (none — post-publish stub-bump PR is `chore/ci-stub-bump-pr-after-release`)

@@ -27,6 +27,10 @@ jobs:
         shell: bash
         run: bash .github/scripts/check-release-tag.sh --self-test
 
+      - name: Stub-bump script self-test
+        shell: bash
+        run: bash .github/scripts/bump-app-fw-version-stub.sh --self-test
+
       - name: Run host unit tests
         shell: bash
         run: |
