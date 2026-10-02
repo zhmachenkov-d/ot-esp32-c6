@@ -9,7 +9,7 @@ OpenTherm Wi‑Fi MQTT gateway (OTC6) for the WeAct ESP32-C6 Mini. ESP-IDF ≥5.
 
 - Only long-lived branch is `main` (always releasable). Short-lived `feature/*`, `fix/*`, `chore/*`, `hotfix/*` from `main`; update them with `git rebase`, never `git merge` from `main`.
 - Merge to `main` only via PR: squash-and-merge; the squash commit must be Conventional Commits (`type(scope): description`). Prefer 1 approval (2 if the PR touches bootloader/NVS/OTA paths). Tech Lead merges.
-- Release intent on `main`: SemVer from Conventional Commits, tag `vX.Y.Z` must be **strictly greater** than the local `APP_FW_VERSION` stub (details in `firmware/README.md`); GitHub Actions builds and publishes OTA `manifest.json` + `otc6_gateway.bin` on that tag. Do not invent release branches.
+- Release intent on `main`: SemVer from Conventional Commits, tag `vX.Y.Z` must be **strictly greater** than the local `APP_FW_VERSION` stub (tag>stub compare in `firmware/README.md`). GitHub Actions builds and publishes OTA `manifest.json` + `otc6_gateway.bin` on that tag. Do not invent release branches.
 - Never hardcode secrets (tokens, passwords, keys) in source; use GitHub Secrets, local `.env` (untracked), or device NVS filled by SoftAP commissioning.
 - Architectural changes: add an ADR under `docs/adr/` before implementing.
 
