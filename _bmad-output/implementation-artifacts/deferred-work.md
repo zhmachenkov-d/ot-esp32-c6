@@ -11,7 +11,7 @@
   evidence: Verification-gap review — gates live only inline in release.yml; host-tests cannot catch regression until a real tag push
 - source_spec: `_bmad-output/specs/spec-release-tag-gt-stub/SPEC.md`
   summary: Enforce Release tag SemVer strictly greater than local APP_FW_VERSION stub (check-release-tag.sh / release.yml)
-  evidence: Blind-hunter — tagging ≤ stub yields a Release devices may not treat as an update; forge deferred-one-slice keep/after; stub hygiene after release still manual (surviving crack)
+  evidence: Blind-hunter — tagging ≤ stub yields a Release devices may not treat as an update; forge deferred-one-slice keep/after; stub hygiene after release tracked via post-publish stub-bump PR (chore/ci-stub-bump-pr-after-release)
 - source_spec: /workspaces/ot-esp32-c6/_bmad-output/implementation-artifacts/spec-firmware-ota-release-ci.md
   summary: Document/enforce that next Release tag must be newer than devices flashing the local APP_FW_VERSION stub — superseded by spec-release-tag-gt-stub
   evidence: Blind-hunter — tagging ≤ stub yields a Release devices may not treat as an update; forge already named local stub mismatch crack; tracking moved to SPEC slice 2/3
@@ -40,8 +40,9 @@
   summary: OTA cancel sampling during sha256 verify / before finish — resolved (cancel_now + mid-sha256 poll)
   evidence: Walkthrough follow-up patch on fix/ota-cancel-neq-failed-wire
 - source_spec: `_bmad-output/specs/spec-ota-cancel-neq-failed/stories/2-wire-download-task-abort-to-cancel-neq-failed.md`
-  summary: HIL OTA cancel≠failed checklist case — resolved (v10_ota.md case 7)
-  evidence: Walkthrough follow-up patch on fix/ota-cancel-neq-failed-wire
+  summary: HIL OTA cancel≠failed checklist case — resolved (v10_ota.md case 7; results ✓ 2026-10-02)
+  evidence: Serial Starting OTA → Writing ota_1 → OTA cancelled; stayed 0.2.2; docs/hil-ota-results-3-7
+
 - source_spec: /workspaces/ot-esp32-c6/_bmad-output/implementation-artifacts/spec-release-tag-gt-stub.md
   summary: AGENTS.md still omits Release tag must be strictly greater than APP_FW_VERSION stub
   evidence: Blind-hunter — firmware/README.md documents the gate; agent-facing AGENTS.md release guidance does not

@@ -137,3 +137,80 @@ jobs:
             echo "The publish job reuses drafts and uploads with \`--clobber\`. Do not delete the draft unless abandoning the release."
             echo "Drafts are not \`/latest\` — devices will not OTA from an unpublished draft."
           } >>"$GITHUB_STEP_SUMMARY"
+
+  # After a published Release, open a PR that bumps the checked-in APP_FW_VERSION
+  # stub to the shipped version so the next tag>stub gate tracks last ship.
+  # Human merges the PR (not a direct push to main).
+  stub-bump-pr:
+    name: Open stub-bump PR
+    needs: [build, publish]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Bump stub and open PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.build.outputs.version }}
+          TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          set -euo pipefail
+          BRANCH="chore/bump-app-fw-version-${VERSION}"
+          HEADER="firmware/main/app_config.h"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git fetch origin main
+          git checkout -B "$BRANCH" origin/main
+
+          bash .github/scripts/bump-app-fw-version-stub.sh \
+            --version "${VERSION}" \
+            --header "${HEADER}" \
+            --github-output
+
+          if git diff --quiet -- "$HEADER"; then
+            echo "Stub already at ${VERSION} on main; no PR needed."
+            {
+              echo "### Stub bump skipped"
+              echo "\`APP_FW_VERSION\` on \`main\` is already \`${VERSION}\`."
+            } >>"$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          git add "$HEADER"
+          git commit -m "chore(version): bump APP_FW_VERSION stub to ${VERSION}"
+          git push -u origin "HEAD:refs/heads/${BRANCH}" --force-with-lease
+
+          if gh pr list --base main --head "$BRANCH" --json number --jq 'length' | grep -qx '0'; then
+            BODY="$(printf '%s\n' \
+              '## Summary' \
+              "- After Release ${TAG}, bump the local \`APP_FW_VERSION\` stub in \`firmware/main/app_config.h\` to \`${VERSION}\` so the next tag must be strictly newer than the last shipped version." \
+              '- Opened automatically by the Release workflow; merge when ready (does not push to `main` directly).' \
+              '- Note: PRs opened with `GITHUB_TOKEN` do not re-trigger workflows; push an empty commit or re-open if you need Host tests on the PR.' \
+              '' \
+              '## Test plan' \
+              "- [ ] Diff is only the stub string → \`${VERSION}`" \
+              "- [ ] Next Release tag must be > \`${VERSION}`")"
+            gh pr create \
+              --base main \
+              --head "$BRANCH" \
+              --title "chore(version): bump APP_FW_VERSION stub to ${VERSION}" \
+              --body "${BODY}"
+            echo "Opened stub-bump PR for ${VERSION}"
+          else
+            echo "Stub-bump PR for branch ${BRANCH} already exists; branch refreshed."
+          fi
+
+          {
+            echo "### Stub-bump PR"
+            echo "Branch \`${BRANCH}\` updates \`APP_FW_VERSION\` stub to \`${VERSION}\`."
+            gh pr list --base main --head "$BRANCH" --json url --jq '.[0].url // empty'
+          } >>"$GITHUB_STEP_SUMMARY"
