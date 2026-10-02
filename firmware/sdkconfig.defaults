@@ -3,6 +3,9 @@ CONFIG_IDF_TARGET="esp32c6"
 
 # FreeRTOS
 CONFIG_FREERTOS_HZ=1000
+# Boot path may drain MQTT session debounce on app_main before tasks start;
+# 3584 was tight for nested HA discovery JSON (~2 KiB+) + snprintf.
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
 
 # Wi‑Fi / LWIP
 CONFIG_ESP_WIFI_SOFTAP_SUPPORT=y
